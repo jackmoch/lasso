@@ -53,28 +53,32 @@ jobs:
             const prNumber = context.payload.pull_request?.number || ${{ github.event.inputs.pr_number }};
             const status = '${{ job.status }}' === 'success' ? '✅ Complete' : '❌ Failed';
 
+            const body = [
+              '## 🤖 Claude Code Review ' + status,
+              '',
+              '**Workflow Run:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}',
+              '',
+              '**Token Conservation:** This review only runs when you add the `claude-review` label. It does NOT run on every commit.',
+              '',
+              '**How this works:**',
+              '- Claude reviews code quality, architecture, potential bugs, security issues',
+              '- Triggered by adding the `claude-review` label to a PR',
+              '- Or manually via Actions → "Run workflow"',
+              '',
+              '**To request another review:**',
+              '1. Remove the `claude-review` label',
+              '2. Make your changes',
+              '3. Add the label back',
+              '',
+              '---',
+              '*Review completed - label will be auto-removed*'
+            ].join('\n');
+
             github.rest.issues.createComment({
               issue_number: prNumber,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: `## 🤖 Claude Code Review ${status}
-
-**Workflow Run:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-
-**Token Conservation:** This review only runs when you add the \`claude-review\` label. It does NOT run on every commit.
-
-**How this works:**
-- Claude reviews code quality, architecture, potential bugs, security issues
-- Triggered by adding the \`claude-review\` label to a PR
-- Or manually via Actions → "Run workflow"
-
-**To request another review:**
-1. Remove the \`claude-review\` label
-2. Make your changes
-3. Add the label back
-
----
-*Review completed - label will be auto-removed*`
+              body: body
             });
 
       - name: Remove review label after completion
