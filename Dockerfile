@@ -5,6 +5,9 @@ FROM node:18-alpine AS frontend-builder
 
 WORKDIR /app
 
+# Install Java (required for shadow-cljs)
+RUN apk add --no-cache openjdk11
+
 # Copy package files and install dependencies
 COPY package.json package-lock.json* ./
 RUN npm ci
