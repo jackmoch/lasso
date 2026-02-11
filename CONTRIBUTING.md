@@ -234,6 +234,116 @@ Before submitting a PR, ensure:
 - [ ] Branch is up to date with target branch
 - [ ] No merge conflicts
 
+## Release Process
+
+Releases are **fully automated** via GitHub Actions. No manual tagging required!
+
+### Creating a Release
+
+**Step 1: Update VERSION and CHANGELOG**
+
+In your feature branch:
+
+```bash
+# Update version number (use semantic versioning)
+echo "0.2.0" > VERSION
+
+# Edit CHANGELOG.md - move items from [Unreleased] to new version
+## [0.2.0] - 2024-02-12
+
+### Added
+- New feature X
+- New feature Y
+
+### Fixed
+- Bug fix Z
+```
+
+**Step 2: Commit changes**
+
+```bash
+git add VERSION CHANGELOG.md
+git commit -m "chore(release): bump version to 0.2.0"
+```
+
+**Step 3: Create PR and merge**
+
+```bash
+git push origin feature/my-feature
+gh pr create --base main --title "chore(release): bump version to 0.2.0"
+
+# After review, merge to main
+```
+
+**Step 4: Automated release happens**
+
+When the PR merges to `main`:
+1. `release.yml` workflow detects VERSION file change
+2. Creates git tag `v0.2.0`
+3. Extracts changelog entry
+4. Creates GitHub release with notes
+5. Posts summary to workflow run
+
+**View releases:** https://github.com/jackmoch/lasso/releases
+
+### Semantic Versioning
+
+We follow [SemVer](https://semver.org/):
+
+- **MAJOR** (1.0.0): Breaking changes
+- **MINOR** (0.1.0): New features, backwards compatible
+- **PATCH** (0.0.1): Bug fixes, backwards compatible
+
+**Examples:**
+- `0.1.0` → `0.2.0`: Added new features
+- `0.2.0` → `0.2.1`: Fixed bugs
+- `0.9.0` → `1.0.0`: First stable release with breaking changes
+
+### Changelog Format
+
+Follow [Keep a Changelog](https://keepachangelog.com/):
+
+```markdown
+## [Unreleased]
+
+### Added
+- New features go here during development
+
+### Changed
+- Changes to existing functionality
+
+### Deprecated
+- Soon-to-be removed features
+
+### Removed
+- Removed features
+
+### Fixed
+- Bug fixes
+
+### Security
+- Vulnerability fixes
+
+## [0.2.0] - 2024-02-12
+
+### Added
+- Feature X implementation
+
+[Unreleased]: https://github.com/jackmoch/lasso/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/jackmoch/lasso/compare/v0.1.0...v0.2.0
+```
+
+### Release Checklist
+
+Before creating a version bump PR:
+
+- [ ] All features/fixes for this release are merged
+- [ ] CHANGELOG.md updated with all changes
+- [ ] VERSION file updated with new version number
+- [ ] Changelog comparison links updated
+- [ ] All CI checks passing
+- [ ] Documentation reflects new version
+
 ## Getting Help
 
 - **Questions**: Open a GitHub Discussion
