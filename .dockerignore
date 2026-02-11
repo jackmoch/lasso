@@ -1,0 +1,35 @@
+# Development files
+.git
+.gitignore
+*.md
+CLAUDE.md
+.env
+.env.*
+
+# Build artifacts
+target/
+.cpcache/
+.shadow-cljs/
+node_modules/
+.nrepl-port
+.calva/
+
+# IDE files
+.vscode/
+.idea/
+*.iml
+.lsp/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Documentation
+docs/
+*.txt
+
+# CI/CD
+.github/
+
+# Tests
+test/

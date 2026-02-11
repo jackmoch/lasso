@@ -1,0 +1,21 @@
+{
+  "name": "lasso",
+  "version": "0.1.0",
+  "description": "Last.fm scrobbling for Spotify Jam sessions",
+  "private": true,
+  "scripts": {
+    "watch": "shadow-cljs watch app",
+    "watch:css": "tailwindcss -i ./resources/public/css/input.css -o ./resources/public/css/tailwind.css --watch",
+    "build:css": "tailwindcss -i ./resources/public/css/input.css -o ./resources/public/css/tailwind.css --minify",
+    "release": "npm run build:css && shadow-cljs release app",
+    "clean": "rm -rf target .shadow-cljs node_modules resources/public/js resources/public/css/tailwind.css"
+  },
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "shadow-cljs": "^2.27.5",
+    "tailwindcss": "^3.4.0"
+  }
+}

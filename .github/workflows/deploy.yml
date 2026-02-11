@@ -1,0 +1,61 @@
+name: Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deployment placeholder
+        run: |
+          echo "🚧 TODO Sprint 8: Implement deployment to Google Cloud Run"
+          echo "Environment: ${{ github.event.inputs.environment }}"
+          echo ""
+          echo "Planned steps:"
+          echo "1. Authenticate with Google Cloud"
+          echo "2. Build and push Docker image to GCR"
+          echo "3. Deploy to Cloud Run"
+          echo "4. Run smoke tests"
+          echo ""
+          echo "See docs/DEPLOYMENT_SECRETS.md for required secrets"
+
+      # TODO Sprint 8: Uncomment and configure these steps
+      #
+      # - name: Authenticate to Google Cloud
+      #   uses: google-github-actions/auth@v2
+      #   with:
+      #     credentials_json: ${{ secrets.GCP_SA_KEY }}
+      #
+      # - name: Set up Cloud SDK
+      #   uses: google-github-actions/setup-gcloud@v2
+      #
+      # - name: Configure Docker for GCR
+      #   run: gcloud auth configure-docker
+      #
+      # - name: Build and push Docker image
+      #   run: |
+      #     docker build -t gcr.io/${{ secrets.GCP_PROJECT_ID }}/lasso:${{ github.sha }} .
+      #     docker push gcr.io/${{ secrets.GCP_PROJECT_ID }}/lasso:${{ github.sha }}
+      #
+      # - name: Deploy to Cloud Run
+      #   run: |
+      #     gcloud run deploy lasso \
+      #       --image gcr.io/${{ secrets.GCP_PROJECT_ID }}/lasso:${{ github.sha }} \
+      #       --platform managed \
+      #       --region us-central1 \
+      #       --set-env-vars ENVIRONMENT=${{ github.event.inputs.environment }} \
+      #       --set-secrets LASTFM_API_KEY=lastfm-api-key:latest,LASTFM_API_SECRET=lastfm-api-secret:latest,SESSION_SECRET=session-secret:latest

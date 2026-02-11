@@ -1,0 +1,100 @@
+name: Claude Code Review (On-Demand)
+
+# This workflow only runs when the 'claude-review' label is added to conserve tokens
+# It does NOT run on every commit
+on:
+  pull_request:
+    types: [labeled]  # Only run when a label is added
+  workflow_dispatch:  # Allow manual trigger
+    inputs:
+      pr_number:
+        description: 'PR number to review'
+        required: true
+        type: number
+
+jobs:
+  claude-review:
+    runs-on: ubuntu-latest
+
+    # Only run if:
+    # 1. PR was labeled with 'claude-review', OR
+    # 2. Manually triggered via workflow_dispatch
+    if: |
+      (github.event_name == 'pull_request' && github.event.label.name == 'claude-review') ||
+      github.event_name == 'workflow_dispatch'
+
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for better context
+
+      - name: Run Claude Code Review
+        id: claude-review
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          plugin_marketplaces: 'https://github.com/anthropics/claude-code.git'
+          plugins: 'code-review@claude-code-plugins'
+          prompt: '/code-review:code-review ${{ github.repository }}/pull/${{ github.event.pull_request.number || github.event.inputs.pr_number }}'
+          show_full_output: true  # Enable detailed logging for better visibility
+
+      - name: Comment review summary
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNumber = context.payload.pull_request?.number || ${{ github.event.inputs.pr_number || 0 }};
+            const status = '${{ job.status }}' === 'success' ? '✅ Complete' : '❌ Failed';
+
+            const body = [
+              '## 🤖 Claude Code Review ' + status,
+              '',
+              '**Workflow Run:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}',
+              '',
+              '**Token Conservation:** This review only runs when you add the `claude-review` label. It does NOT run on every commit.',
+              '',
+              '**How this works:**',
+              '- Claude reviews code quality, architecture, potential bugs, security issues',
+              '- Triggered by adding the `claude-review` label to a PR',
+              '- Or manually via Actions → "Run workflow"',
+              '',
+              '**To request another review:**',
+              '1. Remove the `claude-review` label',
+              '2. Make your changes',
+              '3. Add the label back',
+              '',
+              '---',
+              '*Review completed - label will be auto-removed*'
+            ].join('\n');
+
+            github.rest.issues.createComment({
+              issue_number: prNumber,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: body
+            });
+
+      - name: Remove review label after completion
+        if: github.event_name == 'pull_request' && always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            try {
+              await github.rest.issues.removeLabel({
+                issue_number: context.payload.pull_request.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                name: 'claude-review'
+              });
+              console.log('✓ Removed claude-review label');
+            } catch (error) {
+              // Label might already be removed, that's ok
+              console.log('Label already removed or does not exist');
+            }

@@ -340,6 +340,110 @@ gcloud run deploy lasso --image gcr.io/PROJECT_ID/lasso --platform managed --reg
       :error nil}}
 ```
 
+## Autonomous PR Workflow
+
+This project uses an **autonomous PR review and iteration process** where Claude Code independently:
+1. Creates PRs after pushing feature branches
+2. Monitors CI execution and downloads artifacts
+3. Analyzes failures and debugs issues
+4. Fixes problems and pushes updates
+5. Iterates until all checks pass
+6. Marks PRs ready for human review
+
+### How It Works
+
+**After completing feature work:**
+1. Push your feature branch: `git push origin feature/name`
+2. Claude creates a PR using `gh pr create`
+3. CI automatically runs with enhanced debugging capabilities
+4. Claude monitors using `gh pr checks` and `gh run view`
+5. If failures occur:
+   - Claude downloads artifacts: `gh run download`
+   - Analyzes logs and lint results
+   - Identifies root cause
+   - Fixes code and commits
+   - Pushes updates (CI re-runs automatically)
+6. Once all checks pass, Claude notifies you for final review
+
+### Enhanced CI Pipeline
+
+**Capabilities for Autonomous Debugging:**
+- ✅ Runs on PRs to `main` and `develop` branches
+- ✅ Uploads build artifacts (JAR, JS, CSS, lint results)
+- ✅ Generates detailed build summaries in GitHub UI
+- ✅ Posts automated PR status comments
+- ✅ Uploads Docker images for inspection
+- ✅ Enhanced lint output with file/line annotations
+- ✅ Build artifact size reporting
+- ✅ Docker image layer inspection
+
+**Available Artifacts (7-day retention):**
+- `target/lasso.jar` - Backend JAR
+- `resources/public/js/` - Frontend JavaScript bundle
+- `resources/public/css/tailwind.css` - Compiled CSS
+- `lint-results.txt` - Linting output with errors/warnings
+- Docker image (3-day retention)
+
+**GitHub CLI Commands for PR Management:**
+```bash
+gh pr list                     # List all PRs
+gh pr view 123                 # View PR details
+gh pr checks 123               # Check CI status
+gh run view <run-id> --log     # View CI logs
+gh run download <run-id>       # Download artifacts
+```
+
+### Expected Workflow
+
+**Normal Case (No Issues):**
+```
+Push → Create PR → CI runs → All pass → Notify user → Merge
+```
+
+**Debug Case (CI Failures):**
+```
+Push → Create PR → CI runs → Failures detected
+   ↓
+Download artifacts (lint-results.txt, build logs)
+   ↓
+Analyze root cause (linting errors, compilation failures, etc.)
+   ↓
+Fix code + commit + push
+   ↓
+CI re-runs automatically → Check status
+   ↓
+Repeat until all checks pass → Notify user → Merge
+```
+
+### Escalation Criteria
+
+Claude escalates to human review when:
+- Repeated failures after 3 fix attempts
+- Fundamental design decisions needed
+- External dependency issues (npm/clojars outages)
+- Infrastructure problems (GitHub Actions failures)
+- Security vulnerabilities requiring judgment
+- Breaking changes requiring approval
+
+### Claude Code Review (On-Demand)
+
+For detailed AI code review on important PRs:
+
+1. **Add `claude-review` label** to your PR on GitHub
+2. Claude Code Review workflow runs automatically
+3. Review posted as PR comment with detailed feedback
+4. Label auto-removed to prevent re-runs
+
+**Note:** Only use for important/complex PRs to conserve API tokens. Does NOT run on every commit.
+
+### Documentation
+
+For complete autonomous workflow documentation, see:
+- `docs/development/AUTONOMOUS_PR_WORKFLOW.md` - Detailed process guide
+- `.github/workflows/ci.yml` - CI pipeline configuration
+- `.github/workflows/claude-review.yml` - On-demand code review
+- `CONTRIBUTING.md` - Git workflow and branching strategy
+
 ## Troubleshooting
 
 **REPL won't start:** Clear `.cpcache` and run `clojure -P` to re-download dependencies
@@ -351,3 +455,5 @@ gcloud run deploy lasso --image gcr.io/PROJECT_ID/lasso --platform managed --reg
 **Port 8080 in use:** Find process with `lsof -i :8080` and kill it
 
 **Tailwind classes not applied:** Rebuild CSS with `npm run build:css`, check `tailwind.config.js` content paths
+
+**CI failing on PR:** Run `gh pr checks <pr-number>` to see status, `gh run view <run-id> --log` for detailed logs, `gh run download <run-id>` to inspect artifacts
