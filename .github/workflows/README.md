@@ -44,7 +44,36 @@ gh run download <run-id>
 
 ---
 
-### 2. Claude Code Review (`claude-review.yml`)
+### 2. Claude Interactive (`claude.yml`)
+
+**Trigger:** When `@claude` is mentioned in:
+- Issue comments
+- PR review comments
+- PR reviews
+- Issue titles or bodies
+
+**Purpose:** Interactive Claude Code assistance for specific questions or tasks
+
+**What it does:**
+1. Detects `@claude` mentions in GitHub events
+2. Runs Claude Code with context from the comment
+3. Responds with help, analysis, or performs requested actions
+4. Can read CI results on PRs (with `actions: read` permission)
+
+**Usage:**
+```
+# In a PR comment:
+@claude can you review the changes in src/auth.clj?
+
+# In an issue:
+@claude how do I set up the development environment?
+```
+
+**Token Usage:** Only runs when explicitly mentioned - efficient and controlled
+
+---
+
+### 3. Claude Code Review - On-Demand (`claude-review.yml`)
 
 **Trigger:** On-demand only:
 - When `claude-review` label is added to a PR
@@ -99,7 +128,7 @@ With `show_full_output: true`, you get:
 
 ---
 
-### 3. Automated Release (`release.yml`)
+### 4. Automated Release (`release.yml`)
 
 **Trigger:** Automatically when:
 - `VERSION` file changes on `main` branch
@@ -163,7 +192,7 @@ gh workflow run release.yml
 
 ---
 
-### 4. Deployment (`deploy.yml`)
+### 5. Deployment (`deploy.yml`)
 
 **Trigger:** Manual workflow dispatch only
 
@@ -196,13 +225,21 @@ See [`docs/deployment/DEPLOYMENT_SECRETS.md`](../../docs/deployment/DEPLOYMENT_S
 - Ensures code quality baseline
 - Fast feedback (2-3 minutes)
 
-**Claude Review:** Use selectively
+**Claude Interactive (`@claude`):** On-demand help
+- Mention `@claude` in PR/issue comments
+- Ask specific questions about code
+- Request analysis of specific files
+- Get help with errors or debugging
+- Lightweight - only runs when mentioned
+
+**Claude Code Review (label):** Use selectively
 - Complex feature implementations
 - Architectural changes
 - Security-sensitive code
 - Before important releases
-- When you want second opinion
-- Consumes API tokens - use wisely
+- When you want comprehensive review
+- Add `claude-review` label to trigger
+- Consumes more tokens - use wisely
 
 **Automated Release:** Runs automatically on version bump
 - Triggers when VERSION file changes on main

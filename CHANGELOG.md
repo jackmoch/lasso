@@ -11,10 +11,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Automated release workflow (`release.yml`) that creates git tags and GitHub releases when VERSION file is updated
 - Complete release process documentation in CONTRIBUTING.md
 - Semantic versioning guidelines
+- Documentation for Claude Interactive workflow (`claude.yml`) for `@claude` mentions
 
 ### Changed
 - Sprint 2 marked as complete in CLAUDE.md project status
 - Enhanced workflow documentation with release workflow guide
+
+### Removed
+- Automatic Claude Code Review workflow that ran on every PR commit (replaced with on-demand label-triggered version to conserve tokens)
 
 ### Infrastructure
 - deps.edn with development, test, REPL, and uberjar build aliases
