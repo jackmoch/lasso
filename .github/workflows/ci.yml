@@ -48,8 +48,7 @@ jobs:
         run: |
           curl -sLO https://raw.githubusercontent.com/clj-kondo/clj-kondo/master/script/install-clj-kondo
           chmod +x install-clj-kondo
-          ./install-clj-kondo
-          sudo mv clj-kondo /usr/local/bin/
+          sudo ./install-clj-kondo
 
       - name: Lint Clojure code
         id: lint
