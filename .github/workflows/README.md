@@ -99,7 +99,71 @@ With `show_full_output: true`, you get:
 
 ---
 
-### 3. Deployment (`deploy.yml`)
+### 3. Automated Release (`release.yml`)
+
+**Trigger:** Automatically when:
+- `VERSION` file changes on `main` branch
+- Manual workflow dispatch
+
+**Purpose:** Automatically create git tags and GitHub releases when version is updated
+
+**What it does:**
+1. Reads version from `VERSION` file
+2. Checks if tag already exists (prevents duplicates)
+3. Extracts changelog entry for that version from `CHANGELOG.md`
+4. Creates annotated git tag (e.g., `v0.1.0`)
+5. Pushes tag to GitHub
+6. Creates GitHub release with changelog notes
+7. Posts release summary to workflow UI
+
+**How to create a release:**
+
+**Step 1: Update VERSION and CHANGELOG**
+```bash
+# In your feature branch
+echo "0.2.0" > VERSION
+
+# Update CHANGELOG.md - add new version section
+## [0.2.0] - 2024-02-12
+### Added
+- New feature description
+```
+
+**Step 2: Commit and create PR**
+```bash
+git add VERSION CHANGELOG.md
+git commit -m "chore(release): bump version to 0.2.0"
+git push origin feature/my-feature
+
+# Create PR
+gh pr create --base main --title "chore(release): bump version to 0.2.0"
+```
+
+**Step 3: Merge PR**
+- When PR is merged to `main`, the release workflow automatically:
+  - Creates tag `v0.2.0`
+  - Creates GitHub release
+  - Extracts changelog entry as release notes
+
+**Manual trigger:**
+```bash
+# If you need to manually trigger release creation
+gh workflow run release.yml
+```
+
+**Output:**
+- Git tag created and pushed (e.g., `v0.2.0`)
+- GitHub release created at `https://github.com/jackmoch/lasso/releases`
+- Release notes populated from `CHANGELOG.md`
+
+**Idempotency:**
+- Safe to re-run - checks if tag exists before creating
+- Won't create duplicate tags/releases
+- Useful if VERSION file is touched without version change
+
+---
+
+### 4. Deployment (`deploy.yml`)
 
 **Trigger:** Manual workflow dispatch only
 
@@ -139,6 +203,13 @@ See [`docs/deployment/DEPLOYMENT_SECRETS.md`](../../docs/deployment/DEPLOYMENT_S
 - Before important releases
 - When you want second opinion
 - Consumes API tokens - use wisely
+
+**Automated Release:** Runs automatically on version bump
+- Triggers when VERSION file changes on main
+- Creates git tags and GitHub releases
+- Extracts changelog for release notes
+- No manual tagging needed
+- Always runs after merging version bump PRs
 
 **Deployment:** Controlled releases only
 - After PR merge and manual testing

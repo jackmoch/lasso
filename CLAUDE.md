@@ -289,19 +289,22 @@ gcloud run deploy lasso --image gcr.io/PROJECT_ID/lasso --platform managed --reg
 
 ## Current Project Status
 
-**Sprint 2 (Current)**: Design Phase - Setting up development environment and project scaffolding
+**Sprint 2 (Completed)**: ✅ Development environment and project scaffolding complete
 
 **Completed:**
 - ✅ Project Charter
 - ✅ Product Requirements Document (PRD)
 - ✅ Technical Design Document (TDD)
 - ✅ Sprint 2 Implementation Plan
+- ✅ Development environment setup
+- ✅ Project scaffolding (all 25+ files)
+- ✅ Build tools configuration (deps.edn, shadow-cljs, Tailwind)
+- ✅ CI/CD pipeline (lint, build, test, Docker)
+- ✅ Autonomous PR workflow with debugging
+- ✅ Automated release workflow
+- ✅ Comprehensive documentation
 
-**In Progress:**
-- 🔲 Development environment setup
-- 🔲 Project scaffolding
-- 🔲 Build tools configuration
-- 🔲 CI/CD pipeline skeleton
+**Version:** v0.1.0 (Released 2024-02-11)
 
 **Next Phases:**
 - Sprint 3-4: Backend development (Last.fm API integration, OAuth, polling)
@@ -436,13 +439,42 @@ For detailed AI code review on important PRs:
 
 **Note:** Only use for important/complex PRs to conserve API tokens. Does NOT run on every commit.
 
+### Automated Releases
+
+Releases are **fully automated** - no manual tagging required!
+
+**How it works:**
+1. Update `VERSION` file with new version (e.g., `0.2.0`)
+2. Update `CHANGELOG.md` with changes for that version
+3. Commit with message: `chore(release): bump version to X.Y.Z`
+4. Create PR and merge to `main`
+5. GitHub Actions automatically:
+   - Creates git tag `vX.Y.Z`
+   - Extracts changelog entry
+   - Creates GitHub release
+   - Posts summary to workflow run
+
+**Semantic Versioning:**
+- `MAJOR.MINOR.PATCH` (e.g., `1.2.3`)
+- Increment MAJOR for breaking changes
+- Increment MINOR for new features (backwards compatible)
+- Increment PATCH for bug fixes (backwards compatible)
+
+**Workflow:** `.github/workflows/release.yml`
+- Triggers on VERSION file changes to main
+- Checks if tag already exists (prevents duplicates)
+- Safe to re-run (idempotent)
+
+See `CONTRIBUTING.md` for detailed release process.
+
 ### Documentation
 
 For complete autonomous workflow documentation, see:
 - `docs/development/AUTONOMOUS_PR_WORKFLOW.md` - Detailed process guide
 - `.github/workflows/ci.yml` - CI pipeline configuration
 - `.github/workflows/claude-review.yml` - On-demand code review
-- `CONTRIBUTING.md` - Git workflow and branching strategy
+- `.github/workflows/release.yml` - Automated release and tagging
+- `CONTRIBUTING.md` - Git workflow, branching strategy, and release process
 
 ## Troubleshooting
 
