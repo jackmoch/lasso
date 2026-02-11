@@ -295,11 +295,56 @@ Claude escalates to human when:
 - ❌ Security vulnerabilities requiring review
 - ❌ Breaking changes requiring approval
 
+## Claude Code Review (On-Demand)
+
+In addition to automated CI checks, you can request an AI code review:
+
+### How to Request a Review
+
+**Option 1: Via Label (Recommended)**
+1. Go to your PR on GitHub
+2. Add the `claude-review` label
+3. Claude Code Review workflow runs automatically
+4. Review posted as PR comment
+5. Label auto-removed after completion
+
+**Option 2: Manual Trigger**
+1. Go to Actions → Claude Code Review
+2. Click "Run workflow"
+3. Enter PR number
+4. Review runs and posts results
+
+### What Claude Reviews
+
+- Code quality and best practices
+- Potential bugs and edge cases
+- Architecture and design patterns
+- Security vulnerabilities
+- Performance considerations
+- Documentation completeness
+- Test coverage gaps
+
+### Token Management
+
+**Important:** Claude Code Review uses API tokens, so:
+- ✅ Only runs when explicitly requested (via label or manual trigger)
+- ✅ Does NOT run on every commit
+- ✅ Automatically removes label after completion to prevent re-runs
+- ✅ Use sparingly for important PRs or complex changes
+
+### Review Output
+
+With `show_full_output: true`, you get:
+- Detailed analysis of changes
+- Specific file/line feedback
+- Suggestions for improvements
+- Link to full workflow logs
+
 ## Future Enhancements
 
 Planned improvements:
 
-- [ ] Automated code review with detailed feedback
+- [x] Automated code review with detailed feedback (via claude-review label)
 - [ ] Performance regression detection
 - [ ] Security scanning (SAST, dependency checks)
 - [ ] Visual regression testing (screenshots)

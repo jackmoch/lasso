@@ -425,11 +425,23 @@ Claude escalates to human review when:
 - Security vulnerabilities requiring judgment
 - Breaking changes requiring approval
 
+### Claude Code Review (On-Demand)
+
+For detailed AI code review on important PRs:
+
+1. **Add `claude-review` label** to your PR on GitHub
+2. Claude Code Review workflow runs automatically
+3. Review posted as PR comment with detailed feedback
+4. Label auto-removed to prevent re-runs
+
+**Note:** Only use for important/complex PRs to conserve API tokens. Does NOT run on every commit.
+
 ### Documentation
 
 For complete autonomous workflow documentation, see:
 - `docs/development/AUTONOMOUS_PR_WORKFLOW.md` - Detailed process guide
 - `.github/workflows/ci.yml` - CI pipeline configuration
+- `.github/workflows/claude-review.yml` - On-demand code review
 - `CONTRIBUTING.md` - Git workflow and branching strategy
 
 ## Troubleshooting
