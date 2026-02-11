@@ -389,10 +389,23 @@ This is a personal project currently in active development. Contributions are we
 
 MIT License - See LICENSE file for details
 
+## Documentation
+
+- **Setup & Usage**: This README
+- **Contributing**: [CONTRIBUTING.md](CONTRIBUTING.md)
+- **Changelog**: [CHANGELOG.md](CHANGELOG.md)
+- **Claude Code Instructions**: [CLAUDE.md](CLAUDE.md)
+
+**Additional Documentation** (see [docs/README.md](docs/README.md) for full structure):
+- **Project Planning**: [docs/project-planning/](docs/project-planning/) - PRD, TDD, Project Charter
+- **Development**: [docs/development/](docs/development/) - Workflows and processes
+- **Deployment**: [docs/deployment/](docs/deployment/) - Deployment guides
+- **Sprints**: [docs/sprints/](docs/sprints/) - Sprint plans and summaries
+
 ## Support
 
 - **Issues**: [GitHub Issues](https://github.com/jackmoch/lasso/issues)
-- **Documentation**: See `docs/` directory and `CLAUDE.md`
+- **Documentation**: See [docs/](docs/) directory organized by category
 - **Last.fm API Docs**: [Last.fm API Documentation](https://www.last.fm/api)
 
 ## Acknowledgments
