@@ -1,0 +1,353 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Project Overview
+
+**Lasso** is a web application that enables Last.fm users to track their listening history during Spotify Jam sessions. When users participate in Spotify Jams as guests (non-owners), their listening activity is not scrobbled to Last.fm. Lasso solves this by allowing users to temporarily follow another Last.fm user and mirror their scrobbles in real-time.
+
+## Technology Stack
+
+### Backend (Clojure)
+- **Framework**: Pedestal with Jetty server
+- **Build**: tools.deps (deps.edn)
+- **Key Libraries**:
+  - clj-http for HTTP client
+  - Malli for validation
+  - Buddy for encryption
+  - timbre for logging
+  - core.async for concurrent polling
+
+### Frontend (ClojureScript)
+- **UI Framework**: Reagent (React wrapper)
+- **State Management**: Re-frame
+- **Build**: shadow-cljs
+- **Styling**: Tailwind CSS
+- **Routing**: reitit-frontend
+- **HTTP**: cljs-ajax
+
+### Infrastructure
+- **Deployment**: Docker containers on Google Cloud Run
+- **CI/CD**: GitHub Actions
+- **Session Storage**: In-memory atom (MVP)
+
+## Common Commands
+
+### Development
+
+```bash
+# Start backend REPL (Terminal 1)
+clj -M:dev:repl
+# In REPL: (user/start) to start server
+
+# Start frontend with hot reload (Terminal 2)
+npx shadow-cljs watch app
+
+# Watch CSS changes (Terminal 3)
+npm run watch:css
+# or build once:
+npm run build:css
+
+# REPL utilities
+(user/start)    # Start server
+(user/stop)     # Stop server
+(user/restart)  # Restart server
+(user/reset)    # Stop, reload namespaces, restart
+```
+
+### Testing
+
+```bash
+# Backend tests
+clj -M:test
+
+# Run specific test namespace
+clj -M:test --focus lasso.auth.core-test
+
+# Lint code
+clj-kondo --lint src
+
+# Frontend tests (when implemented)
+npx shadow-cljs compile test
+node target/test.js
+```
+
+### Building
+
+```bash
+# Production frontend build
+npx shadow-cljs release app
+
+# Minified CSS
+npm run build:css
+
+# Backend uberjar
+clj -X:uberjar
+
+# Docker image
+docker build -t lasso:latest .
+
+# Clean build artifacts
+npm run clean
+rm -rf target .cpcache
+```
+
+## Architecture
+
+### High-Level Flow
+
+1. **User Authentication**: Last.fm OAuth 2.0 flow
+   - User initiates login → Backend generates OAuth URL → Last.fm authorization → Callback with token → Backend exchanges for session key → Server-side session created
+
+2. **Following Session**: User-controlled scrobble mirroring
+   - User specifies target Last.fm username → Backend validates target → User starts session → Backend polls target user's recent tracks (15-30s intervals) → New scrobbles identified and submitted to authenticated user's account → Frontend polls for session status updates
+
+3. **Session States**: `not-started` → `active` → `paused` → `stopped`
+
+### Project Structure
+
+```
+src/
+├── clj/lasso/          # Backend code
+│   ├── server.clj      # Entry point, server lifecycle
+│   ├── config.clj      # Environment configuration
+│   ├── routes.clj      # Pedestal routes
+│   ├── middleware.clj  # Custom interceptors
+│   ├── auth/           # OAuth implementation
+│   │   ├── core.clj    # OAuth flow
+│   │   └── session.clj # Session management
+│   ├── lastfm/         # Last.fm API integration
+│   │   ├── client.clj  # API client
+│   │   ├── oauth.clj   # OAuth specific
+│   │   └── scrobble.clj # Scrobble operations
+│   ├── session/        # Session management
+│   │   ├── store.clj   # Session storage
+│   │   └── manager.clj # Session lifecycle
+│   ├── polling/        # Scrobble polling engine
+│   │   ├── engine.clj  # Polling orchestration
+│   │   └── scheduler.clj # Scheduling logic
+│   └── validation/     # Malli schemas
+└── cljs/lasso/         # Frontend code
+    ├── core.cljs       # App entry point
+    ├── events.cljs     # Re-frame events
+    ├── subs.cljs       # Re-frame subscriptions
+    ├── views.cljs      # Main views
+    ├── routes.cljs     # Client routing
+    ├── api.cljs        # Backend API client
+    └── components/     # UI components
+```
+
+### Key Architectural Decisions
+
+1. **SPA with RESTful API**: Clear separation between frontend (ClojureScript SPA) and backend (Clojure API server). Backend handles all Last.fm integration and maintains session state.
+
+2. **Polling-Based Updates**: Backend polls Last.fm API every 15-30 seconds during active sessions to respect rate limits (5 req/sec). Frontend polls backend for status updates.
+
+3. **In-Memory Session Store**: Sessions stored in server-side atom for MVP. Future: migrate to Redis for multi-instance deployment.
+
+4. **Stateless API Design**: All endpoints (except auth) require session cookie. Session data isolated per user, cleared on logout.
+
+5. **Security**: OAuth-only (no passwords), HTTP-only secure cookies, server-side token encryption, HTTPS enforced.
+
+## API Design
+
+### Backend Endpoints
+
+**Authentication:**
+- `POST /api/auth/init` - Initialize OAuth flow
+- `GET /api/auth/callback` - OAuth callback handler
+- `POST /api/auth/logout` - Destroy session
+
+**Session Management:**
+- `POST /api/session/start` - Start following target user
+- `POST /api/session/pause` - Pause active session
+- `POST /api/session/resume` - Resume paused session
+- `POST /api/session/stop` - Stop and clear session
+- `GET /api/session/status` - Get current status + recent activity
+
+### Last.fm API Integration
+
+**Required Methods:**
+- `auth.getToken` - Initiate OAuth
+- `auth.getSession` - Exchange token for session key
+- `user.getRecentTracks` - Fetch target user's scrobbles
+- `user.getInfo` - Validate target username
+- `track.scrobble` - Submit scrobble to authenticated user
+
+**Rate Limiting:**
+- Respect 5 requests/second limit
+- Polling interval: 15-30 seconds
+- Exponential backoff on errors
+- Request queuing to avoid bursts
+
+## Development Workflow
+
+### REPL-Driven Development
+
+The backend uses REPL-driven development:
+1. Start REPL with `clj -M:dev:repl`
+2. Evaluate `(user/start)` to start server
+3. Make code changes
+4. Reload with `(user/restart)` or `(user/reset)` for full namespace reload
+5. Test functions directly in REPL
+
+### Frontend Hot Reload
+
+shadow-cljs provides instant feedback:
+1. Edit files in `src/cljs/`
+2. Save - changes appear immediately in browser
+3. Re-frame state preserved across reloads
+4. Check browser console for compilation errors
+
+### Making Changes
+
+**Adding New API Endpoint:**
+1. Add route in `lasso.routes`
+2. Create handler function
+3. Update Re-frame events/subscriptions on frontend
+4. Add API call in `lasso.api` (frontend)
+5. Update Malli schemas in `lasso.validation.schemas`
+
+**Adding New Re-frame Event:**
+1. Add event handler in `lasso.events`
+2. Add subscription in `lasso.subs` (if needed)
+3. Update component to dispatch event
+4. Test in browser with re-frame-10x DevTools
+
+**Modifying Session State:**
+1. Update schema in `lasso.validation.schemas`
+2. Update session store structure in `lasso.session.store`
+3. Update session manager logic in `lasso.session.manager`
+4. Update frontend state shape in `lasso.events` (initialize-db)
+
+## Testing Strategy
+
+**Unit Tests:**
+- Test core business logic functions
+- Mock external API calls (Last.fm)
+- Use `clojure.test` for assertions
+- Use `test.check` for property-based testing where applicable
+
+**Integration Tests:**
+- Test Last.fm API integration
+- Test session management lifecycle
+- Test concurrent session handling
+
+**Manual E2E Tests:**
+- Complete authentication flow
+- Start → Pause → Resume → Stop session flow
+- Error recovery scenarios
+- Mobile responsiveness
+
+## Important Constraints
+
+1. **Last.fm API Rate Limits**: Maximum 5 requests/second. Polling must respect this limit.
+
+2. **OAuth Requirements**: Must use OAuth 2.0 (no password storage). Tokens encrypted server-side.
+
+3. **Session Scope**: Only real-time scrobbles during active session. No historical backfilling.
+
+4. **Single Target**: MVP supports following one user at a time (no multi-user following).
+
+5. **Public Profiles Only**: Target user's profile must be public/accessible.
+
+## Environment Variables
+
+Required configuration (see `.env.example`):
+```bash
+LASTFM_API_KEY=your_api_key
+LASTFM_API_SECRET=your_api_secret
+OAUTH_CALLBACK_URL=http://localhost:8080/api/auth/callback
+SESSION_SECRET=random_secret_min_32_chars
+PORT=8080
+HOST=0.0.0.0
+ENVIRONMENT=development
+POLLING_INTERVAL_MS=20000
+```
+
+## Code Style
+
+- Follow Clojure Style Guide
+- Use `cljfmt` for formatting
+- Max line length: 100 characters
+- Prefer pure functions
+- Document public functions with docstrings
+- Namespace organization: `lasso.<domain>.<component>`
+
+## Deployment
+
+**Docker Build:**
+```bash
+docker build -t lasso:latest .
+```
+
+**Google Cloud Run Deployment:**
+```bash
+gcloud builds submit --tag gcr.io/PROJECT_ID/lasso
+gcloud run deploy lasso --image gcr.io/PROJECT_ID/lasso --platform managed --region us-central1
+```
+
+## Current Project Status
+
+**Sprint 2 (Current)**: Design Phase - Setting up development environment and project scaffolding
+
+**Completed:**
+- ✅ Project Charter
+- ✅ Product Requirements Document (PRD)
+- ✅ Technical Design Document (TDD)
+- ✅ Sprint 2 Implementation Plan
+
+**In Progress:**
+- 🔲 Development environment setup
+- 🔲 Project scaffolding
+- 🔲 Build tools configuration
+- 🔲 CI/CD pipeline skeleton
+
+**Next Phases:**
+- Sprint 3-4: Backend development (Last.fm API integration, OAuth, polling)
+- Sprint 5-6: Frontend development (UI, session controls, activity feed)
+- Sprint 7: Integration & testing
+- Sprint 8: Deployment
+- Sprint 9: Launch
+
+## Common Patterns
+
+### Session Data Structure
+```clojure
+{:session-id "uuid"
+ :username "lastfm-username"
+ :session-key "encrypted-session-key"
+ :created-at 1706832000000
+ :last-activity 1706832300000
+ :following-session {:target-username "target"
+                     :state :active
+                     :started-at 1706832100000
+                     :last-poll 1706832280000
+                     :scrobble-count 15
+                     :scrobble-cache #{"Artist|Track|Timestamp"}}}
+```
+
+### Re-frame App State
+```clojure
+{:auth {:authenticated? false
+        :username nil}
+ :session {:state :not-started
+           :target-username nil
+           :scrobble-count 0
+           :recent-scrobbles []
+           :last-poll nil}
+ :ui {:loading? false
+      :error nil}}
+```
+
+## Troubleshooting
+
+**REPL won't start:** Clear `.cpcache` and run `clojure -P` to re-download dependencies
+
+**shadow-cljs build fails:** Clear cache with `rm -rf .shadow-cljs` and `npx shadow-cljs clean`
+
+**Hot reload not working:** Hard refresh browser (Cmd+Shift+R), check shadow-cljs output for compilation errors
+
+**Port 8080 in use:** Find process with `lsof -i :8080` and kill it
+
+**Tailwind classes not applied:** Rebuild CSS with `npm run build:css`, check `tailwind.config.js` content paths

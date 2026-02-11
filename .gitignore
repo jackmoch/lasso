@@ -1,0 +1,60 @@
+# Clojure/ClojureScript
+.cpcache/
+target/
+.nrepl-port
+.lein-*
+.rebel_readline_history
+*.jar
+*.class
+*.log
+
+# shadow-cljs
+.shadow-cljs/
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build outputs
+public/js/
+public/css/
+resources/public/js/
+resources/public/css/
+
+# Environment variables (DO NOT COMMIT SECRETS)
+.env
+.env.local
+.env.*.local
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Editor files
+*~
+*.swp
+*.swo
+.vscode/
+.idea/
+*.iml
+
+# Docker
+*.pid
+*.seed
+*.pid.lock
+
+# Testing
+.clj-kondo/.cache/
+
+# Logs
+logs/
+*.log
+
+# Temporary files
+*.tmp
+*.temp
