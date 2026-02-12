@@ -8,121 +8,133 @@ This file tells you exactly what to work on next. When you finish a task, update
 
 ## Immediate Next Task
 
-### 🎯 Sprint 3-4 Phase 4: Implement OAuth API Routes
+### 🎯 Sprint 5-6: Frontend Development
 
-**Goal:** Create Pedestal routes for Last.fm OAuth authentication flow
+**Goal:** Build ClojureScript frontend with Reagent and Re-frame to connect to the fully functional backend
+
+**Current Status:**
+- ✅ Backend v0.2.0 fully functional (OAuth, sessions, scrobble tracking, polling)
+- ✅ 75 tests passing, 451 assertions
+- 🎯 Ready to build the UI
 
 **Files to Create/Modify:**
-- `src/clj/lasso/routes.clj` - Main routes definition
-- `test/clj/lasso/routes_test.clj` - Route tests
+
+**Core Re-frame Setup:**
+- `src/cljs/lasso/events.cljs` - Event handlers for state mutations
+- `src/cljs/lasso/subs.cljs` - Subscriptions for component data
+- `src/cljs/lasso/db.cljs` - App state schema and initialization
+- `src/cljs/lasso/api.cljs` - Backend API client
+
+**UI Components:**
+- `src/cljs/lasso/views.cljs` - Main app layout
+- `src/cljs/lasso/components/auth.cljs` - Login/logout UI
+- `src/cljs/lasso/components/session_controls.cljs` - Start/pause/resume/stop buttons
+- `src/cljs/lasso/components/activity_feed.cljs` - Real-time scrobble display
+- `src/cljs/lasso/components/status.cljs` - Session status display
 
 **What to Implement:**
 
-1. **Initialize OAuth Flow** (`POST /api/auth/init`)
-   ```clojure
-   ;; Request: {}
-   ;; Response: {:auth-url "https://last.fm/api/auth?token=..."}
-   ;; - Call lasso.lastfm.oauth/get-token
-   ;; - Store request token in session
-   ;; - Return authorization URL for redirect
-   ```
+1. **Authentication Flow**
+   - Login button that calls `POST /api/auth/init`
+   - Redirect to Last.fm OAuth
+   - Handle callback and show authenticated state
+   - Logout functionality
+   - Session persistence check on app load
 
-2. **OAuth Callback** (`GET /api/auth/callback`)
-   ```clojure
-   ;; Request: ?token=abc123
-   ;; Response: {:status "success", :username "user123"}
-   ;; - Extract token from query params
-   ;; - Call lasso.lastfm.oauth/get-session with token
-   ;; - Store session key in lasso.session.store
-   ;; - Set session cookie
-   ;; - Return success with username
-   ```
+2. **Session Controls**
+   - Form to enter target Last.fm username
+   - Start button (`POST /api/session/start`)
+   - Pause/Resume buttons (conditional rendering)
+   - Stop button with confirmation
+   - Visual state indicators (not-started, active, paused, stopped)
 
-3. **Logout** (`POST /api/auth/logout`)
-   ```clojure
-   ;; Request: {} (authenticated)
-   ;; Response: {:status "logged-out"}
-   ;; - Get session-id from request
-   ;; - Call lasso.session.store/delete-session
-   ;; - Clear session cookie
-   ;; - Return success
-   ```
+3. **Activity Feed**
+   - Poll `GET /api/session/status` every 5 seconds when active
+   - Display recent scrobbles in real-time
+   - Show scrobble count
+   - Display target username
+   - Show last poll time
+
+4. **State Management**
+   - Re-frame events for all API calls
+   - Subscriptions for auth state, session state, scrobbles
+   - Loading states and error handling
+   - Optimistic UI updates
+
+5. **Styling**
+   - Responsive layout with Tailwind CSS
+   - Dark/light theme support
+   - Mobile-friendly design
+   - Loading spinners and transitions
+   - Error message display
 
 **Dependencies Already Available:**
-- ✅ `lasso.lastfm.oauth/get-token` - Gets OAuth request token
-- ✅ `lasso.lastfm.oauth/get-session` - Exchanges token for session key
-- ✅ `lasso.session.store/create-session` - Stores user session
-- ✅ `lasso.session.store/delete-session` - Removes session
-- ✅ `lasso.validation.schemas` - Request/response schemas
+- ✅ Backend API fully functional at `http://localhost:8080/api/*`
+- ✅ OAuth flow: `/api/auth/init`, `/api/auth/callback`, `/api/auth/logout`
+- ✅ Session management: `/api/session/start|pause|resume|stop|status`
+- ✅ shadow-cljs build configuration
+- ✅ Tailwind CSS pipeline
+- ✅ Reagent and Re-frame dependencies
 
 **Testing:**
-- Unit tests for each route handler
-- Integration test for full OAuth flow
-- Test error cases (invalid token, expired session, etc.)
+- Manual E2E testing with real Last.fm accounts
+- Test all session state transitions
+- Test error handling (invalid username, network errors)
+- Mobile responsiveness testing
+- Cross-browser compatibility
 
 **Acceptance Criteria:**
-- [ ] All three routes implemented and tested
-- [ ] Full OAuth flow works end-to-end
-- [ ] Session cookies set/cleared correctly
-- [ ] All tests pass
-- [ ] Code linted with no warnings
+- [ ] Complete OAuth flow working in browser
+- [ ] Can start/pause/resume/stop sessions
+- [ ] Real-time scrobble feed displays updates
+- [ ] Responsive design works on mobile
+- [ ] All error states handled gracefully
+- [ ] Frontend connects successfully to backend
+- [ ] App usable for basic scrobble tracking workflow
 
-**Estimated Time:** 2-3 hours
+**Estimated Time:** 1-2 days
 
 **Reference:**
-- Pedestal routing: https://pedestal.io/reference/routing-quick-reference
-- OAuth flow diagram: `docs/technical-design.md` (if exists)
-- Existing client code: `src/clj/lasso/lastfm/oauth.clj`
+- Backend API: All routes implemented and tested
+- Re-frame tutorial: https://day8.github.io/re-frame/
+- Reagent docs: https://reagent-project.github.io/
+- Existing skeleton: `src/cljs/lasso/core.cljs` and `views.cljs`
 
 ---
 
 ## After That (Queued Tasks)
 
-### 2️⃣ Sprint 3-4 Phase 5: Session Management Routes
+### 2️⃣ Sprint 7: Integration & Testing
 
-**Files:** `src/clj/lasso/routes.clj` (extend)
-
-Routes to implement:
-- `POST /api/session/start` - Start following target user
-- `POST /api/session/pause` - Pause active session
-- `POST /api/session/resume` - Resume paused session
-- `POST /api/session/stop` - Stop and clear session
-- `GET /api/session/status` - Get current status + recent scrobbles
-
-**Dependencies:**
-- Phase 4 (OAuth routes) must be complete
-- Will use `lasso.session.manager` (to be created in Phase 6)
+**After frontend is functional:**
+- End-to-end testing with real Last.fm accounts
+- Error handling improvements
+- Performance optimization
+- User experience polish
+- Bug fixes discovered during testing
 
 ---
 
-### 3️⃣ Sprint 3-4 Phase 6: Polling Engine
+### 3️⃣ Sprint 8: Deployment Preparation
 
-**Files to Create:**
-- `src/clj/lasso/polling/engine.clj`
-- `src/clj/lasso/polling/scheduler.clj`
-- `src/clj/lasso/session/manager.clj`
+**Files:** Docker, CI/CD, deployment configs
 
-**Functionality:**
-- Poll target user's Last.fm every 15-30 seconds
-- Identify new scrobbles
-- Submit to authenticated user
-- Handle errors and rate limiting
-- Manage session states
-
-**Dependencies:**
-- Phase 4 & 5 (routes) must be complete
-- Uses `lasso.lastfm.client` and `lasso.lastfm.scrobble`
+Tasks:
+- Production build optimization
+- Docker image finalization
+- Google Cloud Run configuration
+- Environment variable management
+- Monitoring and logging setup
 
 ---
 
-### 4️⃣ Sprint 5-6: Frontend Development
+### 4️⃣ Sprint 9: Launch
 
-**After Sprint 3-4 backend is complete:**
-- UI components (Reagent)
-- Re-frame state management
-- Session controls (start/pause/stop)
-- Activity feed for scrobbles
-- Responsive design with Tailwind
+**Final steps before public release:**
+- Production deployment to GCP
+- Domain setup and SSL
+- User documentation
+- Announcement and marketing
 
 ---
 

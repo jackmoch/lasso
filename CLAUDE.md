@@ -344,7 +344,7 @@ gcloud run deploy lasso --image gcr.io/PROJECT_ID/lasso --platform managed --reg
 
 ## Current Project Status
 
-**Current Sprint**: Sprint 3-4 (Backend Development - In Progress)
+**Current Sprint**: Sprint 5-6 (Frontend Development - Not Started)
 
 **Completed:**
 - ✅ **Sprint 2**: Development environment and project scaffolding
@@ -364,24 +364,30 @@ gcloud run deploy lasso --image gcr.io/PROJECT_ID/lasso --platform managed --reg
   - Branch protection requires passing `lint-and-build` check
   - Automated release workflow triggered on VERSION changes to `main`
 
-- ✅ **Sprint 3-4 Phase 1-3**: Backend foundation
+- ✅ **Sprint 3-4**: Complete Backend Implementation (Released v0.2.0 on 2026-02-12)
   - Last.fm API client with rate limiting
-  - OAuth 2.0 flow implementation
+  - OAuth 2.0 flow implementation (init, callback, logout)
   - Session store with encryption
   - Scrobble tracking and submission
-  - Comprehensive test coverage (44 tests, 205 assertions)
+  - Auth and session management routes
+  - Middleware for session authentication
+  - Polling engine for real-time scrobble tracking
+  - Session lifecycle management (start/pause/resume/stop)
+  - Comprehensive test coverage (75 tests, 451 assertions, 0 failures)
+  - Integration tests for manual testing issues
+  - Fixed 7 critical bugs discovered during E2E testing
+  - Complete end-to-end functionality verified
 
-**Version:** v0.1.0 (Released 2024-02-11)
+**Version:** v0.2.0 (Released 2026-02-12)
 
 **Branching Model:**
-- **`main`**: Production releases only (currently v0.1.0)
-- **`develop`**: Active development (ahead of main with Sprint 3-4 Phase 1-3)
+- **`main`**: Production releases only (currently v0.2.0)
+- **`develop`**: Active development (synced with main at v0.2.0)
 - **Feature branches**: Created from and merged to `develop`
 - **Release branches**: Created from `develop`, merged to `main` (triggers automated release)
 
 **Next Phases:**
-- Sprint 3-4: Backend development (OAuth routes, polling engine) - IN PROGRESS
-- Sprint 5-6: Frontend development (UI, session controls, activity feed)
+- Sprint 5-6: Frontend development (UI, session controls, activity feed) - NEXT
 - Sprint 7: Integration & testing
 - Sprint 8: Deployment
 - Sprint 9: Launch
