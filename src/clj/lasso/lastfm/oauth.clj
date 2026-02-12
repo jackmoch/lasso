@@ -8,7 +8,7 @@
    Returns {:token \"...\"} or {:error \"...\"}."
   []
   (client/api-request {:method "auth.getToken"
-                       :signed true}))
+                       :signed false}))
 
 (defn generate-auth-url
   "Generate the URL for user to authorize the application.

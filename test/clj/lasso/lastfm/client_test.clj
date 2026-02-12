@@ -83,7 +83,13 @@
   (testing "Rate limiting is called for each request"
     (let [wait-calls (atom 0)
           requests (atom [])]
-      (with-redefs [clj-http.client/post
+      (with-redefs [;; Mock both GET and POST since unsigned requests use GET, signed use POST
+                    clj-http.client/get
+                    (fn [url opts]
+                      (swap! requests conj (System/currentTimeMillis))
+                      {:status 200
+                       :body {:user {:name "testuser"}}})
+                    clj-http.client/post
                     (fn [url opts]
                       (swap! requests conj (System/currentTimeMillis))
                       {:status 200
@@ -104,7 +110,13 @@
     ;; This is a slower integration test that actually measures timing
     ;; Only run if we want to verify actual delay behavior
     (let [requests (atom [])]
-      (with-redefs [clj-http.client/post
+      (with-redefs [;; Mock both GET and POST
+                    clj-http.client/get
+                    (fn [url opts]
+                      (swap! requests conj (System/currentTimeMillis))
+                      {:status 200
+                       :body {:user {:name "testuser"}}})
+                    clj-http.client/post
                     (fn [url opts]
                       (swap! requests conj (System/currentTimeMillis))
                       {:status 200

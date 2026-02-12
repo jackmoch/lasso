@@ -35,10 +35,10 @@
           context {:request request}
           enter-fn (get-in mw/require-auth [:enter])
           result (enter-fn context)]
-      ;; Should attach session to context
-      (is (some? (:session result)))
-      (is (= "testuser" (get-in result [:session :username])))
-      (is (= session-id (get-in result [:session :session-id])))
+      ;; Should attach session to request within context
+      (is (some? (get-in result [:request :session])))
+      (is (= "testuser" (get-in result [:request :session :username])))
+      (is (= session-id (get-in result [:request :session :session-id])))
       ;; Should NOT set response (allow request to continue)
       (is (nil? (:response result)))))
 
@@ -96,29 +96,29 @@
 
 ;; Tests for helper functions
 (deftest get-session-test
-  (testing "extracts session from context"
+  (testing "extracts session from request"
     (let [session-data {:session-id "test-id" :username "testuser"}
-          context {:session session-data}
-          result (mw/get-session context)]
+          request {:session session-data}
+          result (mw/get-session request)]
       (is (= session-data result))))
 
-  (testing "returns nil when no session in context"
-    (let [context {}
-          result (mw/get-session context)]
+  (testing "returns nil when no session in request"
+    (let [request {}
+          result (mw/get-session request)]
       (is (nil? result)))))
 
 (deftest get-session-id-test
-  (testing "extracts session ID from context session"
-    (let [context {:session {:session-id "test-id-123" :username "testuser"}}
-          result (mw/get-session-id context)]
+  (testing "extracts session ID from request session"
+    (let [request {:session {:session-id "test-id-123" :username "testuser"}}
+          result (mw/get-session-id request)]
       (is (= "test-id-123" result))))
 
-  (testing "returns nil when no session in context"
-    (let [context {}
-          result (mw/get-session-id context)]
+  (testing "returns nil when no session in request"
+    (let [request {}
+          result (mw/get-session-id request)]
       (is (nil? result))))
 
   (testing "returns nil when session has no session-id"
-    (let [context {:session {:username "testuser"}}
-          result (mw/get-session-id context)]
+    (let [request {:session {:username "testuser"}}
+          result (mw/get-session-id request)]
       (is (nil? result)))))

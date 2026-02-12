@@ -19,10 +19,10 @@
                    session-id (http/parse-cookie request "session-id")]
                (if session-id
                  (if-let [session (store/get-session session-id)]
-                   ;; Session found - attach to context and update last activity
+                   ;; Session found - attach to request and update last activity
                    (do
                      (auth-session/touch session-id)
-                     (assoc context :session session))
+                     (assoc-in context [:request :session] session))
                    ;; Session not found
                    (assoc context :response
                           (http/error-response "Session not found or expired"
@@ -35,14 +35,14 @@
                                              :error-code "AUTH_REQUIRED")))))}))
 
 (defn get-session
-  "Extract session data from context (attached by require-auth interceptor).
+  "Extract session data from request (attached by require-auth interceptor).
    Returns nil if no session present."
-  [context]
-  (:session context))
+  [request]
+  (:session request))
 
 (defn get-session-id
-  "Extract session ID from context session data.
+  "Extract session ID from request session data.
    Returns nil if no session present."
-  [context]
-  (when-let [session (get-session context)]
+  [request]
+  (when-let [session (get-session request)]
     (:session-id session)))

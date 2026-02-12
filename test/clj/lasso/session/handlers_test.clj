@@ -22,19 +22,22 @@
   (when-let [body (:body response)]
     (json/read-str body :key-fn keyword)))
 
-(defn make-context [session-id body]
-  "Helper to create a test context with session and request body."
+(defn make-request [session-id body-data]
+  "Helper to create a test request with session and request body as InputStream."
   {:session {:session-id session-id}
-   :request {:body (json/write-str body)}})
+   :body (java.io.ByteArrayInputStream. (.getBytes (json/write-str body-data)))})
+
+(defn make-request-no-body [session-id]
+  "Helper to create a test request with session but no body."
+  {:session {:session-id session-id}})
 
 ;; Tests for start-session-handler
 (deftest start-session-handler-test
   (testing "successfully start session with valid target user"
     (with-redefs [lastfm/api-request (fn [_] {:user {:name "targetuser"}})]
       (let [{:keys [session-id]} (auth-session/create-session "testuser" "session-key")
-            context (make-context session-id {:target_username "targetuser"})
-            result (handlers/start-session-handler context)
-            response (:response result)
+            request (make-request session-id {:target_username "targetuser"})
+            response (handlers/start-session-handler request)
             body (parse-json-body response)]
         (is (= 200 (:status response)))
         (is (= "active" (:state body)))
@@ -43,9 +46,8 @@
 
   (testing "fail when target_username missing"
     (let [{:keys [session-id]} (auth-session/create-session "testuser" "session-key")
-          context (make-context session-id {})
-          result (handlers/start-session-handler context)
-          response (:response result)
+          request (make-request session-id {})
+          response (handlers/start-session-handler request)
           body (parse-json-body response)]
       (is (= 400 (:status response)))
       (is (= "Missing target_username" (:error body)))
@@ -54,9 +56,8 @@
   (testing "fail when target user doesn't exist"
     (with-redefs [lastfm/api-request (fn [_] {:error "User not found"})]
       (let [{:keys [session-id]} (auth-session/create-session "testuser" "session-key")
-            context (make-context session-id {:target_username "nonexistent"})
-            result (handlers/start-session-handler context)
-            response (:response result)
+            request (make-request session-id {:target_username "nonexistent"})
+            response (handlers/start-session-handler request)
             body (parse-json-body response)]
         (is (= 400 (:status response)))
         (is (string? (:error body)))
@@ -65,9 +66,8 @@
   (testing "handles exceptions gracefully"
     (with-redefs [manager/start-session (fn [_ _] (throw (Exception. "Database error")))]
       (let [{:keys [session-id]} (auth-session/create-session "testuser" "session-key")
-            context (make-context session-id {:target_username "targetuser"})
-            result (handlers/start-session-handler context)
-            response (:response result)
+            request (make-request session-id {:target_username "targetuser"})
+            response (handlers/start-session-handler request)
             body (parse-json-body response)]
         (is (= 500 (:status response)))
         (is (= "Failed to start session" (:error body)))
@@ -80,9 +80,8 @@
       (let [{:keys [session-id]} (auth-session/create-session "testuser" "session-key")
             ;; Start session first
             _ (manager/start-session session-id "targetuser")
-            context {:session {:session-id session-id}}
-            result (handlers/pause-session-handler context)
-            response (:response result)
+            request (make-request-no-body session-id)
+            response (handlers/pause-session-handler request)
             body (parse-json-body response)]
         (is (= 200 (:status response)))
         (is (= "paused" (:state body)))
@@ -90,9 +89,8 @@
 
   (testing "fail when no active session"
     (let [{:keys [session-id]} (auth-session/create-session "testuser" "session-key")
-          context {:session {:session-id session-id}}
-          result (handlers/pause-session-handler context)
-          response (:response result)
+          request (make-request-no-body session-id)
+          response (handlers/pause-session-handler request)
           body (parse-json-body response)]
       (is (= 400 (:status response)))
       (is (string? (:error body)))
@@ -101,9 +99,8 @@
   (testing "handles exceptions gracefully"
     (with-redefs [manager/pause-session (fn [_] (throw (Exception. "Error")))]
       (let [{:keys [session-id]} (auth-session/create-session "testuser" "session-key")
-            context {:session {:session-id session-id}}
-            result (handlers/pause-session-handler context)
-            response (:response result)
+            request (make-request-no-body session-id)
+            response (handlers/pause-session-handler request)
             body (parse-json-body response)]
         (is (= 500 (:status response)))
         (is (= "Failed to pause session" (:error body)))
@@ -117,9 +114,8 @@
             ;; Start and pause session
             _ (manager/start-session session-id "targetuser")
             _ (manager/pause-session session-id)
-            context {:session {:session-id session-id}}
-            result (handlers/resume-session-handler context)
-            response (:response result)
+            request (make-request-no-body session-id)
+            response (handlers/resume-session-handler request)
             body (parse-json-body response)]
         (is (= 200 (:status response)))
         (is (= "active" (:state body)))
@@ -129,9 +125,8 @@
     (with-redefs [lastfm/api-request (fn [_] {:user {:name "targetuser"}})]
       (let [{:keys [session-id]} (auth-session/create-session "testuser" "session-key")
             _ (manager/start-session session-id "targetuser")
-            context {:session {:session-id session-id}}
-            result (handlers/resume-session-handler context)
-            response (:response result)
+            request (make-request-no-body session-id)
+            response (handlers/resume-session-handler request)
             body (parse-json-body response)]
         (is (= 400 (:status response)))
         (is (string? (:error body)))
@@ -140,9 +135,8 @@
   (testing "handles exceptions gracefully"
     (with-redefs [manager/resume-session (fn [_] (throw (Exception. "Error")))]
       (let [{:keys [session-id]} (auth-session/create-session "testuser" "session-key")
-            context {:session {:session-id session-id}}
-            result (handlers/resume-session-handler context)
-            response (:response result)
+            request (make-request-no-body session-id)
+            response (handlers/resume-session-handler request)
             body (parse-json-body response)]
         (is (= 500 (:status response)))
         (is (= "Failed to resume session" (:error body)))
@@ -154,9 +148,8 @@
     (with-redefs [lastfm/api-request (fn [_] {:user {:name "targetuser"}})]
       (let [{:keys [session-id]} (auth-session/create-session "testuser" "session-key")
             _ (manager/start-session session-id "targetuser")
-            context {:session {:session-id session-id}}
-            result (handlers/stop-session-handler context)
-            response (:response result)
+            request (make-request-no-body session-id)
+            response (handlers/stop-session-handler request)
             body (parse-json-body response)]
         (is (= 200 (:status response)))
         (is (true? (:success body)))
@@ -166,9 +159,8 @@
 
   (testing "stop when no session (no-op)"
     (let [{:keys [session-id]} (auth-session/create-session "testuser" "session-key")
-          context {:session {:session-id session-id}}
-          result (handlers/stop-session-handler context)
-          response (:response result)
+          request (make-request-no-body session-id)
+          response (handlers/stop-session-handler request)
           body (parse-json-body response)]
       (is (= 200 (:status response)))
       (is (true? (:success body)))))
@@ -176,9 +168,8 @@
   (testing "handles exceptions gracefully"
     (with-redefs [manager/stop-session (fn [_] (throw (Exception. "Error")))]
       (let [{:keys [session-id]} (auth-session/create-session "testuser" "session-key")
-            context {:session {:session-id session-id}}
-            result (handlers/stop-session-handler context)
-            response (:response result)
+            request (make-request-no-body session-id)
+            response (handlers/stop-session-handler request)
             body (parse-json-body response)]
         (is (= 500 (:status response)))
         (is (= "Failed to stop session" (:error body)))
@@ -190,9 +181,8 @@
     (with-redefs [lastfm/api-request (fn [_] {:user {:name "targetuser"}})]
       (let [{:keys [session-id]} (auth-session/create-session "testuser" "session-key")
             _ (manager/start-session session-id "targetuser")
-            context {:session {:session-id session-id}}
-            result (handlers/status-handler context)
-            response (:response result)
+            request (make-request-no-body session-id)
+            response (handlers/status-handler request)
             body (parse-json-body response)]
         (is (= 200 (:status response)))
         (is (true? (:authenticated body)))
@@ -203,9 +193,8 @@
 
   (testing "status without following session"
     (let [{:keys [session-id]} (auth-session/create-session "testuser" "session-key")
-          context {:session {:session-id session-id}}
-          result (handlers/status-handler context)
-          response (:response result)
+          request (make-request-no-body session-id)
+          response (handlers/status-handler request)
           body (parse-json-body response)]
       (is (= 200 (:status response)))
       (is (true? (:authenticated body)))
@@ -215,9 +204,8 @@
   (testing "handles exceptions gracefully"
     (with-redefs [manager/get-session-status (fn [_] (throw (Exception. "Error")))]
       (let [{:keys [session-id]} (auth-session/create-session "testuser" "session-key")
-            context {:session {:session-id session-id}}
-            result (handlers/status-handler context)
-            response (:response result)
+            request (make-request-no-body session-id)
+            response (handlers/status-handler request)
             body (parse-json-body response)]
         (is (= 500 (:status response)))
         (is (= "Failed to get session status" (:error body)))
