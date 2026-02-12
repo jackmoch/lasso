@@ -3,6 +3,7 @@
   (:require [lasso.session.store :as store]
             [lasso.lastfm.client :as lastfm]
             [lasso.validation.schemas :as schemas]
+            [lasso.polling.scheduler :as scheduler]
             [taoensso.timbre :as log]))
 
 (defn validate-target-user
@@ -47,7 +48,10 @@
                          session
                          (assoc session :following-session following-session))))]
         (if updated
-          {:success true :session updated}
+          (do
+            ;; Start polling for this session
+            (scheduler/handle-session-state-change session-id :active)
+            {:success true :session updated})
           {:success false :error "Session not found"}))
       {:success false :error (:error validation)})))
 
@@ -71,6 +75,8 @@
                        session-id
                        (fn [session]
                          (assoc-in session [:following-session :state] :paused)))]
+          ;; Stop polling when paused
+          (scheduler/handle-session-state-change session-id :paused)
           {:success true :session updated})))
     {:success false :error "Session not found"}))
 
@@ -94,6 +100,8 @@
                        session-id
                        (fn [session]
                          (assoc-in session [:following-session :state] :active)))]
+          ;; Resume polling when resumed
+          (scheduler/handle-session-state-change session-id :active)
           {:success true :session updated})))
     {:success false :error "Session not found"}))
 
@@ -111,7 +119,10 @@
                      ;; No following session to stop
                      session)))]
     (if updated
-      {:success true :session updated}
+      (do
+        ;; Stop polling when session stopped
+        (scheduler/handle-session-state-change session-id :stopped)
+        {:success true :session updated})
       {:success false :error "Session not found"})))
 
 (defn get-session-status
