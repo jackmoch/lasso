@@ -21,10 +21,13 @@
     {:success false
      :error (:error response)
      :message (:message response)}
-    (if (get-in response [:scrobbles (keyword "@attr") :accepted])
-      {:success true
-       :accepted (Integer/parseInt (get-in response [:scrobbles (keyword "@attr") :accepted]))
-       :ignored (Integer/parseInt (get-in response [:scrobbles (keyword "@attr") :ignored]))}
+    (if-let [accepted (get-in response [:scrobbles (keyword "@attr") :accepted])]
+      (let [accepted-val (if (string? accepted) (Integer/parseInt accepted) accepted)
+            ignored (get-in response [:scrobbles (keyword "@attr") :ignored])
+            ignored-val (if (string? ignored) (Integer/parseInt ignored) ignored)]
+        {:success true
+         :accepted accepted-val
+         :ignored ignored-val})
       {:success false
        :error "no-accepted-field"
        :message "Response missing accepted field"})))

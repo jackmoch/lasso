@@ -9,8 +9,14 @@ on:
 jobs:
   lint-and-build:
     runs-on: ubuntu-latest
+    outputs:
+      duration: ${{ steps.duration.outputs.duration }}
 
     steps:
+      - name: Record start time
+        id: start-time
+        run: echo "start=$(date +%s)" >> $GITHUB_OUTPUT
+
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -136,6 +142,48 @@ jobs:
             echo "  - Size: $CSS_SIZE" >> $GITHUB_STEP_SUMMARY
           fi
 
+      - name: Calculate and report duration
+        id: duration
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Calculate current run duration
+          END_TIME=$(date +%s)
+          START_TIME=${{ steps.start-time.outputs.start }}
+          DURATION=$((END_TIME - START_TIME))
+          DURATION_MIN=$((DURATION / 60))
+          DURATION_SEC=$((DURATION % 60))
+
+          echo "## ⏱️ CI Duration" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**This run:** ${DURATION_MIN}m ${DURATION_SEC}s (${DURATION}s total)" >> $GITHUB_STEP_SUMMARY
+
+          # Fetch historical average (last 10 successful runs)
+          if command -v gh &> /dev/null; then
+            RECENT_RUNS=$(gh run list --workflow=ci.yml --limit 10 --json conclusion,createdAt,updatedAt --jq '[.[] | select(.conclusion == "success") | (((.updatedAt | fromdateiso8601) - (.createdAt | fromdateiso8601)))] | add / length | floor')
+
+            if [ -n "$RECENT_RUNS" ] && [ "$RECENT_RUNS" != "null" ]; then
+              AVG_MIN=$((RECENT_RUNS / 60))
+              AVG_SEC=$((RECENT_RUNS % 60))
+              echo "**Historical average:** ${AVG_MIN}m ${AVG_SEC}s (${RECENT_RUNS}s total, last 10 runs)" >> $GITHUB_STEP_SUMMARY
+
+              # Show comparison
+              DIFF=$((DURATION - RECENT_RUNS))
+              if [ $DIFF -gt 0 ]; then
+                echo "**Status:** 🐢 ${DIFF}s slower than average" >> $GITHUB_STEP_SUMMARY
+              elif [ $DIFF -lt 0 ]; then
+                DIFF_ABS=$((DIFF * -1))
+                echo "**Status:** 🚀 ${DIFF_ABS}s faster than average" >> $GITHUB_STEP_SUMMARY
+              else
+                echo "**Status:** ✅ Right on average" >> $GITHUB_STEP_SUMMARY
+              fi
+            fi
+          fi
+
+          # Save duration for pr-status-comment job
+          echo "duration=${DURATION}" >> $GITHUB_OUTPUT
+
   docker-build:
     runs-on: ubuntu-latest
     needs: lint-and-build
@@ -201,10 +249,21 @@ jobs:
             const lintStatus = '${{ needs.lint-and-build.result }}' === 'success' ? '✅ Passed' : '❌ Failed';
             const dockerStatus = '${{ needs.docker-build.result }}' === 'success' ? '✅ Passed' : '❌ Failed';
 
+            // Calculate duration
+            const duration = '${{ needs.lint-and-build.outputs.duration }}';
+            let durationText = '';
+            if (duration && duration !== '') {
+              const durationSec = parseInt(duration);
+              const minutes = Math.floor(durationSec / 60);
+              const seconds = durationSec % 60;
+              durationText = `⏱️ **Duration:** ${minutes}m ${seconds}s (~2.5min typical)`;
+            }
+
             const body = `## CI Build Status: ${status}
 
             **Commit:** \`${{ github.sha }}\`
             **Branch:** \`${{ github.head_ref }}\`
+            ${durationText ? '\n' + durationText : ''}
 
             ### Results
             - **Lint & Build:** ${lintStatus}

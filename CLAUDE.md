@@ -2,6 +2,26 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## 🚀 Quick Start for New Sessions
+
+**Starting a fresh Claude Code session? Read these files first:**
+
+1. **`STATUS.md`** - Current project state, what's done, what's in progress
+2. **`NEXT.md`** - Exactly what to work on next with implementation details
+3. **`MEMORY.md`** - Gotchas, patterns, and decisions (in `.claude/projects/.../memory/`)
+4. **This file** - Full project context and architecture
+
+**Ready to code?** Jump straight to `NEXT.md` and start with task #1.
+
+**Session Handoff Checklist:**
+- [ ] Read `STATUS.md` to understand current state
+- [ ] Check `NEXT.md` for immediate next task
+- [ ] Scan `MEMORY.md` for gotchas and patterns
+- [ ] Ensure on `develop` branch: `git checkout develop && git pull`
+- [ ] Review this file for project architecture (below)
+
+---
+
 ## Project Overview
 
 **Lasso** is a web application that enables Last.fm users to track their listening history during Spotify Jam sessions. When users participate in Spotify Jams as guests (non-owners), their listening activity is not scrobbled to Last.fm. Lasso solves this by allowing users to temporarily follow another Last.fm user and mirror their scrobbles in real-time.
@@ -199,6 +219,41 @@ shadow-cljs provides instant feedback:
 3. Re-frame state preserved across reloads
 4. Check browser console for compilation errors
 
+### Gitflow Workflow (IMPORTANT)
+
+**Starting New Work:**
+```bash
+# Always branch from develop for feature work
+git checkout develop
+git pull origin develop
+git checkout -b feature/sprint-5-frontend
+
+# Work, commit, push
+git push -u origin feature/sprint-5-frontend
+
+# Create PR targeting develop (NOT main!)
+gh pr create --base develop --title "feat(ui): Sprint 5 frontend implementation"
+```
+
+**Creating Releases:**
+```bash
+# Branch from develop when ready to release
+git checkout develop
+git checkout -b release/0.2.0
+
+# Update VERSION and CHANGELOG, commit
+echo "0.2.0" > VERSION
+git commit -m "chore(release): bump version to 0.2.0"
+
+# PR to main triggers automated release
+gh pr create --base main --title "Release v0.2.0"
+
+# After merge, sync develop with main
+git checkout develop && git merge main
+```
+
+**See CONTRIBUTING.md for complete gitflow documentation.**
+
 ### Making Changes
 
 **Adding New API Endpoint:**
@@ -289,25 +344,43 @@ gcloud run deploy lasso --image gcr.io/PROJECT_ID/lasso --platform managed --reg
 
 ## Current Project Status
 
-**Sprint 2 (Completed)**: ✅ Development environment and project scaffolding complete
+**Current Sprint**: Sprint 3-4 (Backend Development - In Progress)
 
 **Completed:**
-- ✅ Project Charter
-- ✅ Product Requirements Document (PRD)
-- ✅ Technical Design Document (TDD)
-- ✅ Sprint 2 Implementation Plan
-- ✅ Development environment setup
-- ✅ Project scaffolding (all 25+ files)
-- ✅ Build tools configuration (deps.edn, shadow-cljs, Tailwind)
-- ✅ CI/CD pipeline (lint, build, test, Docker)
-- ✅ Autonomous PR workflow with debugging
-- ✅ Automated release workflow
-- ✅ Comprehensive documentation
+- ✅ **Sprint 2**: Development environment and project scaffolding
+  - Project Charter, PRD, TDD
+  - Development environment setup
+  - Project scaffolding (all 25+ files)
+  - Build tools configuration (deps.edn, shadow-cljs, Tailwind)
+  - CI/CD pipeline (lint, build, test, Docker)
+  - Autonomous PR workflow with debugging
+  - Automated release workflow
+  - Comprehensive documentation
+
+- ✅ **Gitflow Setup** (2024-02-12)
+  - `main` branch protected (production releases only)
+  - `develop` branch created and protected (active development)
+  - CI runs on PRs to both branches
+  - Branch protection requires passing `lint-and-build` check
+  - Automated release workflow triggered on VERSION changes to `main`
+
+- ✅ **Sprint 3-4 Phase 1-3**: Backend foundation
+  - Last.fm API client with rate limiting
+  - OAuth 2.0 flow implementation
+  - Session store with encryption
+  - Scrobble tracking and submission
+  - Comprehensive test coverage (44 tests, 205 assertions)
 
 **Version:** v0.1.0 (Released 2024-02-11)
 
+**Branching Model:**
+- **`main`**: Production releases only (currently v0.1.0)
+- **`develop`**: Active development (ahead of main with Sprint 3-4 Phase 1-3)
+- **Feature branches**: Created from and merged to `develop`
+- **Release branches**: Created from `develop`, merged to `main` (triggers automated release)
+
 **Next Phases:**
-- Sprint 3-4: Backend development (Last.fm API integration, OAuth, polling)
+- Sprint 3-4: Backend development (OAuth routes, polling engine) - IN PROGRESS
 - Sprint 5-6: Frontend development (UI, session controls, activity feed)
 - Sprint 7: Integration & testing
 - Sprint 8: Deployment
@@ -394,7 +467,16 @@ gh pr view 123                 # View PR details
 gh pr checks 123               # Check CI status
 gh run view <run-id> --log     # View CI logs
 gh run download <run-id>       # Download artifacts
+
+# Intelligent CI waiting (recommended for autonomous workflow)
+./scripts/wait-for-ci.sh 123   # Wait based on historical averages
 ```
+
+**CI Duration Tracking:**
+- CI workflow tracks and reports run duration
+- Historical average displayed in GitHub Actions summary
+- Typical run time: ~2min 15s (135 seconds)
+- PR comments include duration for each run
 
 ### Expected Workflow
 

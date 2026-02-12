@@ -51,10 +51,15 @@
                       base-params)]
     (try
       (log/debug "Last.fm API request:" method params)
-      (let [response (http/post api-base
-                               {:form-params final-params
-                                :content-type :x-www-form-urlencoded
-                                :as :json})
+      (let [;; Use POST for signed requests (writes/auth), GET for reads
+            http-method (if signed http/post http/get)
+            request-params (if signed
+                            {:form-params final-params
+                             :content-type :x-www-form-urlencoded
+                             :as :json}
+                            {:query-params final-params
+                             :as :json})
+            response (http-method api-base request-params)
             body (:body response)]
         (log/debug "Last.fm API response:" (pr-str body))
         (if (contains? body :error)

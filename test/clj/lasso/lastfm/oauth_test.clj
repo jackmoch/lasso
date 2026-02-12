@@ -14,7 +14,8 @@
           (is (= 1 (count @requests)))
           (let [req (first @requests)]
             (is (= "auth.getToken" (:method req)))
-            (is (true? (:signed req))))
+            ;; auth.getToken does not require signature
+            (is (false? (:signed req))))
           (is (= "test-token-123" (:token result))))))))
 
 (deftest generate-auth-url-test
