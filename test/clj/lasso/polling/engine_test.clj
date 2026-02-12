@@ -161,4 +161,74 @@
                                                     :scrobble-cache #{}})))
             result (engine/poll-and-scrobble session-id)]
         (is (= 1 (:scrobbled result)))
-        (is (= #{"The Beatles|Hey Jude|1234567890"} (:new-cache result)))))))
+        (is (= #{"The Beatles|Hey Jude|1234567890"} (:new-cache result))))))
+
+  (testing "does not cache failed scrobbles"
+    (with-redefs [client/api-request (fn [req]
+                                      (if (= "user.getRecentTracks" (:method req))
+                                        {:recenttracks {:track [{:artist {:#text "Artist 1"}
+                                                                :name "Track 1"
+                                                                :date {:uts "100"}}
+                                                               {:artist {:#text "Artist 2"}
+                                                                :name "Track 2"
+                                                                :date {:uts "200"}}
+                                                               {:artist {:#text "Artist 3"}
+                                                                :name "Track 3"
+                                                                :date {:uts "300"}}]}}
+                                        {:scrobbles {(keyword "@attr") {:accepted "1" :ignored "0"}}}))
+                 scrobble/scrobble-track (fn [track _]
+                                          ;; Fail Track 1 and Track 3, succeed Track 2
+                                          (cond
+                                            (= "Track 1" (:track track))
+                                            {:success false :error "API error"}
+                                            (= "Track 3" (:track track))
+                                            {:success false :error "Rate limit"}
+                                            :else
+                                            {:success true :accepted 1 :ignored 0}))]
+      (let [{:keys [session-id]} (auth-session/create-session "testuser" "session-key")
+            _ (store/update-session
+               session-id
+               (fn [session]
+                 (assoc session :following-session {:state :active
+                                                    :target-username "targetuser"
+                                                    :scrobble-count 0
+                                                    :scrobble-cache #{}})))
+            result (engine/poll-and-scrobble session-id)]
+        ;; Only 1 successful scrobble (Track 2)
+        (is (= 1 (:scrobbled result)))
+        ;; Cache only contains successful track
+        (is (= #{"Artist 2|Track 2|200"} (:new-cache result)))
+        ;; Failed tracks NOT in cache
+        (is (not (contains? (:new-cache result) "Artist 1|Track 1|100")))
+        (is (not (contains? (:new-cache result) "Artist 3|Track 3|300"))))))
+
+  (testing "failed tracks can be retried on next poll"
+    (with-redefs [client/api-request (fn [req]
+                                      (if (= "user.getRecentTracks" (:method req))
+                                        {:recenttracks {:track [{:artist {:#text "Artist 1"}
+                                                                :name "Track 1"
+                                                                :date {:uts "100"}}]}}
+                                        {:scrobbles {(keyword "@attr") {:accepted "1" :ignored "0"}}}))
+                 scrobble/scrobble-track (fn [_ _] {:success false :error "API error"})]
+      (let [{:keys [session-id]} (auth-session/create-session "testuser" "session-key")
+            _ (store/update-session
+               session-id
+               (fn [session]
+                 (assoc session :following-session {:state :active
+                                                    :target-username "targetuser"
+                                                    :scrobble-count 0
+                                                    :scrobble-cache #{}})))
+            ;; First poll - scrobble fails
+            result1 (engine/poll-and-scrobble session-id)]
+        ;; No successful scrobbles
+        (is (= 0 (:scrobbled result1)))
+        ;; Cache is empty (failed track not cached)
+        (is (empty? (:new-cache result1)))
+
+        ;; Second poll with same track - should retry since not in cache
+        (with-redefs [scrobble/scrobble-track (fn [_ _] {:success true :accepted 1 :ignored 0})]
+          (let [result2 (engine/poll-and-scrobble session-id)]
+            ;; Now succeeds
+            (is (= 1 (:scrobbled result2)))
+            ;; Now cached
+            (is (= #{"Artist 1|Track 1|100"} (:new-cache result2)))))))))
