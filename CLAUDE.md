@@ -447,7 +447,16 @@ gh pr view 123                 # View PR details
 gh pr checks 123               # Check CI status
 gh run view <run-id> --log     # View CI logs
 gh run download <run-id>       # Download artifacts
+
+# Intelligent CI waiting (recommended for autonomous workflow)
+./scripts/wait-for-ci.sh 123   # Wait based on historical averages
 ```
+
+**CI Duration Tracking:**
+- CI workflow tracks and reports run duration
+- Historical average displayed in GitHub Actions summary
+- Typical run time: ~2min 15s (135 seconds)
+- PR comments include duration for each run
 
 ### Expected Workflow
 
