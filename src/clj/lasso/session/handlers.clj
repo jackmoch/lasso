@@ -14,11 +14,24 @@
    Returns: {:state 'active', :target_username '...', :scrobble_count 0}"
   [request]
   (try
-    (let [session-id (mw/get-session-id request)
-          body (get-in request [:body])
-          request-data (if (string? body)
-                        (json/read-str body :key-fn keyword)
-                        body)
+    (let [_ (log/info "DEBUG start-session-handler request keys:" (keys request))
+          _ (log/info "DEBUG request :session:" (:session request))
+          session-id (mw/get-session-id request)
+          _ (log/info "DEBUG session-id:" session-id)
+          body (:body request)
+          request-data (cond
+                         ;; Already parsed by body-params interceptor
+                         (:json-params request) (:json-params request)
+                         (:body-params request) (:body-params request)
+                         ;; Body is a string
+                         (string? body) (json/read-str body :key-fn keyword)
+                         ;; Body is an InputStream
+                         (instance? java.io.InputStream body)
+                         (json/read-str (slurp body) :key-fn keyword)
+                         ;; Already a map
+                         (map? body) body
+                         ;; Default empty map
+                         :else {})
           target-username (:target_username request-data)]
 
       (if-not target-username

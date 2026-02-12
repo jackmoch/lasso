@@ -40,9 +40,8 @@
 (deftest auth-init-handler-test
   (testing "successful OAuth initialization"
     (with-redefs [oauth/get-token (fn [] {:token "test-token-123"})]
-      (let [context {}
-            result (handlers/auth-init-handler context)
-            response (:response result)
+      (let [request {}
+            response (handlers/auth-init-handler request)
             body (parse-json-body response)]
         (is (= 200 (:status response)))
         (is (= "application/json" (get-in response [:headers "Content-Type"])))
@@ -51,9 +50,8 @@
 
   (testing "OAuth token request fails"
     (with-redefs [oauth/get-token (fn [] {:error "API_ERROR"})]
-      (let [context {}
-            result (handlers/auth-init-handler context)
-            response (:response result)
+      (let [request {}
+            response (handlers/auth-init-handler request)
             body (parse-json-body response)]
         (is (= 500 (:status response)))
         (is (= "Failed to initiate authentication" (:error body)))
@@ -61,9 +59,8 @@
 
   (testing "handles exceptions gracefully"
     (with-redefs [oauth/get-token (fn [] (throw (Exception. "Network error")))]
-      (let [context {}
-            result (handlers/auth-init-handler context)
-            response (:response result)
+      (let [request {}
+            response (handlers/auth-init-handler request)
             body (parse-json-body response)]
         (is (= 500 (:status response)))
         (is (= "Authentication initialization failed" (:error body)))
@@ -76,9 +73,8 @@
                                           (is (= "authorized-token" token))
                                           {:session {:name "testuser"
                                                     :key "session-key-abc"}})]
-      (let [context {:request {:params {:token "authorized-token"}}}
-            result (handlers/auth-callback-handler context)
-            response (:response result)
+      (let [request {:params {:token "authorized-token"}}
+            response (handlers/auth-callback-handler request)
             body (parse-json-body response)]
         (is (= 200 (:status response)))
         (is (= "testuser" (:username body)))
@@ -91,9 +87,8 @@
           (is (= "testuser" (:username session)))))))
 
   (testing "missing token parameter"
-    (let [context {:request {:params {}}}
-          result (handlers/auth-callback-handler context)
-          response (:response result)
+    (let [request {:params {}}
+          response (handlers/auth-callback-handler request)
           body (parse-json-body response)]
       (is (= 400 (:status response)))
       (is (= "Missing token parameter" (:error body)))
@@ -101,9 +96,8 @@
 
   (testing "OAuth session exchange fails"
     (with-redefs [oauth/get-session-key (fn [_] {:error "INVALID_TOKEN"})]
-      (let [context {:request {:params {:token "bad-token"}}}
-            result (handlers/auth-callback-handler context)
-            response (:response result)
+      (let [request {:params {:token "bad-token"}}
+            response (handlers/auth-callback-handler request)
             body (parse-json-body response)]
         (is (= 401 (:status response)))
         (is (= "Authentication failed" (:error body)))
@@ -111,9 +105,8 @@
 
   (testing "handles exceptions gracefully"
     (with-redefs [oauth/get-session-key (fn [_] (throw (Exception. "Network error")))]
-      (let [context {:request {:params {:token "some-token"}}}
-            result (handlers/auth-callback-handler context)
-            response (:response result)
+      (let [request {:params {:token "some-token"}}
+            response (handlers/auth-callback-handler request)
             body (parse-json-body response)]
         (is (= 500 (:status response)))
         (is (= "Authentication callback failed" (:error body)))
@@ -124,10 +117,9 @@
   (testing "successful logout"
     (let [;; Create a session first
           {:keys [session-id]} (auth-session/create-session "testuser" "session-key")
-          context {:session {:session-id session-id
+          request {:session {:session-id session-id
                             :username "testuser"}}
-          result (handlers/logout-handler context)
-          response (:response result)
+          response (handlers/logout-handler request)
           body (parse-json-body response)]
       (is (= 200 (:status response)))
       (is (true? (:success body)))
@@ -138,9 +130,8 @@
 
   (testing "handles exceptions gracefully"
     (with-redefs [auth-session/destroy-session (fn [_] (throw (Exception. "Database error")))]
-      (let [context {:session {:session-id "some-id"}}
-            result (handlers/logout-handler context)
-            response (:response result)
+      (let [request {:session {:session-id "some-id"}}
+            response (handlers/logout-handler request)
             body (parse-json-body response)]
         (is (= 500 (:status response)))
         (is (= "Logout failed" (:error body)))

@@ -50,15 +50,16 @@
                                                    (dissoc base-params :format)))
                       base-params)]
     (try
-      (println "=== Last.fm API Request ===")
-      (println "Method:" method)
-      (println "Params:" params)
-      (println "API Key:" api-key)
-      (println "Signed:" signed)
-      (println "Final params:" final-params)
-      (let [response (http/get api-base
-                               {:query-params final-params
-                                :as :json})
+      (log/debug "Last.fm API request:" method params)
+      (let [;; Use POST for signed requests (writes/auth), GET for reads
+            http-method (if signed http/post http/get)
+            request-params (if signed
+                            {:form-params final-params
+                             :content-type :x-www-form-urlencoded
+                             :as :json}
+                            {:query-params final-params
+                             :as :json})
+            response (http-method api-base request-params)
             body (:body response)]
         (log/debug "Last.fm API response:" (pr-str body))
         (if (contains? body :error)

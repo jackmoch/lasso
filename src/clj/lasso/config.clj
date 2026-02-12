@@ -34,19 +34,14 @@
 (defn load-config
   "Load application configuration from environment variables."
   []
-  (let [api-key (get-env "LASTFM_API_KEY")
-        api-secret (get-env "LASTFM_API_SECRET")]
-    (println "Loading config...")
-    (println "API Key loaded:" (if api-key (str (subs api-key 0 (min 8 (count api-key))) "...") "NULL"))
-    (println "API Secret loaded:" (if api-secret "***" "NULL"))
-    {:server {:host (get-env "HOST" "0.0.0.0")
-              :port (Integer/parseInt (get-env "PORT" "8080"))}
-     :lastfm {:api-key api-key
-              :api-secret api-secret
-              :callback-url (get-env "OAUTH_CALLBACK_URL" "http://localhost:8080/api/auth/callback")}
-     :session {:secret (get-env "SESSION_SECRET" "development-secret-change-in-production")}
-     :polling {:interval-ms (Integer/parseInt (get-env "POLLING_INTERVAL_MS" "20000"))}
-     :environment (keyword (get-env "ENVIRONMENT" "development"))}))
+  {:server {:host (get-env "HOST" "0.0.0.0")
+            :port (Integer/parseInt (get-env "PORT" "8080"))}
+   :lastfm {:api-key (get-env "LASTFM_API_KEY")
+            :api-secret (get-env "LASTFM_API_SECRET")
+            :callback-url (get-env "OAUTH_CALLBACK_URL" "http://localhost:8080/api/auth/callback")}
+   :session {:secret (get-env "SESSION_SECRET" "development-secret-change-in-production")}
+   :polling {:interval-ms (Integer/parseInt (get-env "POLLING_INTERVAL_MS" "20000"))}
+   :environment (keyword (get-env "ENVIRONMENT" "development"))})
 
 (def config
   "Application configuration loaded from environment."
