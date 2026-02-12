@@ -11,6 +11,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 3. **`MEMORY.md`** - Gotchas, patterns, and decisions (in `.claude/projects/.../memory/`)
 4. **This file** - Full project context and architecture
 
+**Note:** These documentation files are always current because Claude Code automatically updates them after every release as part of the autonomous workflow (see "Creating Releases" section below).
+
 **Ready to code?** Jump straight to `NEXT.md` and start with task #1.
 
 **Session Handoff Checklist:**
@@ -235,24 +237,93 @@ git push -u origin feature/sprint-5-frontend
 gh pr create --base develop --title "feat(ui): Sprint 5 frontend implementation"
 ```
 
-**Creating Releases:**
+**Creating Releases (Autonomous Process):**
+
+**IMPORTANT FOR CLAUDE CODE:** When completing a sprint/release, you MUST autonomously handle the entire release process including all documentation updates. This is NOT a manual process for the user.
+
+**Step 1: Prepare Release Branch**
 ```bash
-# Branch from develop when ready to release
 git checkout develop
-git checkout -b release/0.2.0
+git pull origin develop
+git checkout -b release/X.Y.Z
 
-# Update VERSION and CHANGELOG, commit
-echo "0.2.0" > VERSION
-git commit -m "chore(release): bump version to 0.2.0"
+# Update VERSION file
+echo "X.Y.Z" > VERSION
 
-# PR to main triggers automated release
-gh pr create --base main --title "Release v0.2.0"
+# Update CHANGELOG.md (move [Unreleased] to [X.Y.Z] with date)
+# Edit CHANGELOG.md to finalize release notes
 
-# After merge, sync develop with main
-git checkout develop && git merge main
+git add VERSION CHANGELOG.md
+git commit -m "chore(release): bump version to X.Y.Z"
+git push -u origin release/X.Y.Z
+
+# Create PR to main
+gh pr create --base main --title "Release vX.Y.Z"
 ```
 
-**See CONTRIBUTING.md for complete gitflow documentation.**
+**Step 2: After PR Merges to Main - AUTOMATIC DOCUMENTATION UPDATES**
+
+**CRITICAL:** After the release PR merges, you (Claude Code) MUST automatically update ALL project documentation files. This is part of the autonomous release workflow.
+
+```bash
+# Sync develop with main
+git checkout develop
+git pull origin develop
+git merge origin/main
+git push origin develop
+
+# NOW UPDATE ALL DOCUMENTATION FILES:
+```
+
+**Required Documentation Updates (Autonomous):**
+
+1. **STATUS.md** - Update project status
+   - Update version at top (`**Version:** vX.Y.Z`)
+   - Update current sprint
+   - Move completed work to "What's Been Completed"
+   - Clear "What's In Progress" section
+   - Update test metrics and key metrics
+   - Update branch status diagram
+
+2. **NEXT.md** - Update immediate next task
+   - Change immediate next task to upcoming sprint/phase
+   - Remove/archive completed tasks
+   - Update acceptance criteria and goals
+
+3. **CLAUDE.md** - Update project overview (this file)
+   - Update "Current Sprint" section
+   - Update "Version" in Quick Start
+   - Add completed work to "Completed" section
+   - Update "Current Project Status"
+
+4. **docs/sprints/sprint-X-summary.md** - Create sprint summary
+   - Create new file documenting completed sprint
+   - List all accomplishments and files created/modified
+   - Include test metrics, verification results
+   - Document key decisions and lessons learned
+   - Use existing sprint summaries as template
+
+5. **MEMORY.md** - Update learnings (in `.claude/projects/.../memory/`)
+   - Add new gotchas and patterns discovered
+   - Document what worked well
+   - Update common errors and fixes
+   - Keep concise (under 200 lines)
+
+**Commit Documentation Updates:**
+```bash
+git add STATUS.md NEXT.md CLAUDE.md docs/sprints/sprint-X-summary.md
+git commit -m "docs: update all project documentation after vX.Y.Z release"
+git push origin develop
+```
+
+**Why This Matters:** Keeping documentation synchronized ensures that new Claude Code sessions have accurate context about project state, completed work, and next steps. Missing documentation updates cause confusion and outdated task lists.
+
+**Automation Helpers:**
+- `scripts/prepare-release.sh` - Interactive script for manual releases (fallback)
+- CONTRIBUTING.md "Post-Release Documentation Updates" - Detailed checklist
+- PR template includes release checklist for visibility
+
+**See CONTRIBUTING.md for detailed release process documentation.**
 
 ### Making Changes
 
@@ -505,6 +576,27 @@ CI re-runs automatically → Check status
    ↓
 Repeat until all checks pass → Notify user → Merge
 ```
+
+**Release Case (CRITICAL - Documentation Updates Required):**
+```
+Complete sprint work → Create release branch → Update VERSION/CHANGELOG
+   ↓
+Push release PR to main → CI runs → All pass → Merge
+   ↓
+AUTONOMOUS DOCUMENTATION UPDATE STEP:
+   ↓
+Sync develop with main
+   ↓
+Update ALL documentation files (STATUS.md, NEXT.md, CLAUDE.md, sprint summary, MEMORY.md)
+   ↓
+Commit: "docs: update all project documentation after vX.Y.Z release"
+   ↓
+Push to develop
+   ↓
+Notify user that release and documentation update complete
+```
+
+**This documentation update step is MANDATORY and must happen autonomously without user prompting.** See "Creating Releases (Autonomous Process)" section for detailed checklist of what to update in each file.
 
 ### Escalation Criteria
 
