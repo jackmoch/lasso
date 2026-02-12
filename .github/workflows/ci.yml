@@ -4,9 +4,7 @@ on:
   push:
     branches: [main, develop]
   pull_request:
-    branches: [main, develop]  # Run on PRs to both main and develop
-  pull_request_target:
-    types: [opened, synchronize, reopened]
+    branches: [main, develop]
 
 jobs:
   lint-and-build:
