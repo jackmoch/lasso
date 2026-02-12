@@ -83,9 +83,8 @@ jobs:
         id: test
         run: |
           echo "Running Clojure tests..."
-          clj -M:test || echo "No tests found (expected for Sprint 2)"
-          echo "✅ Test step completed"
-        continue-on-error: true  # Don't fail if no tests exist yet
+          clj -M:test
+          echo "✅ All tests passed"
 
       - name: Build backend
         run: clojure -X:uberjar
