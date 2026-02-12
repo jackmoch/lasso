@@ -26,7 +26,7 @@
   [params]
   (let [api-secret (get-in config/config [:lastfm :api-secret])
         sorted-params (sort-by first params)
-        signature-string (str (apply str (mapcat identity sorted-params))
+        signature-string (str (apply str (mapcat (fn [[k v]] [(name k) v]) sorted-params))
                              api-secret)]
     (crypto/md5 signature-string)))
 
