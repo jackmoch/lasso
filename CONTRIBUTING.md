@@ -6,12 +6,17 @@ Thank you for your interest in contributing to Lasso! This document outlines our
 
 ### Branching Strategy
 
-We follow a **Git Flow** inspired workflow with the following branch types:
+We follow **Git Flow** with the following branch types:
 
 #### Main Branches
 
-- **`main`** - Production-ready code. Protected branch requiring pull requests.
-- **`develop`** - Integration branch for features. Default branch for development.
+- **`main`** - Production releases only. Protected branch requiring pull requests and passing CI.
+  - Only receives merges from `release/*` and `hotfix/*` branches
+  - Every merge triggers automated release creation (tagging, GitHub release)
+
+- **`develop`** - Active development and integration branch. Protected branch requiring pull requests and passing CI.
+  - Receives merges from `feature/*` and `bugfix/*` branches
+  - This is where day-to-day development happens
 
 #### Supporting Branches
 
@@ -109,6 +114,14 @@ git push origin feature/sprint-3-lastfm-api
 
 #### 6. Create a Pull Request
 
+**IMPORTANT: Feature and bugfix PRs target `develop`, NOT `main`!**
+
+```bash
+# Create PR to develop
+gh pr create --base develop --title "feat(api): add Last.fm OAuth flow"
+```
+
+Or via GitHub UI:
 1. Go to GitHub and create a Pull Request from your branch to `develop`
 2. Fill out the PR template with:
    - **Description**: What does this PR do?
@@ -117,15 +130,15 @@ git push origin feature/sprint-3-lastfm-api
    - **Screenshots**: If UI changes (optional)
    - **Related Issues**: Links to issues this PR addresses
 
-3. Request review from maintainers
+3. CI will automatically run (must pass before merge)
 4. Address feedback and update as needed
-5. Once approved, squash and merge into `develop`
+5. Once CI passes and approved, squash and merge into `develop`
 
-### Release Process
+### Release Process (Gitflow)
 
-When ready to release a new version:
+When ready to release a new version (e.g., at the end of a sprint):
 
-#### 1. Create Release Branch
+#### 1. Create Release Branch from Develop
 
 ```bash
 git checkout develop
@@ -136,29 +149,48 @@ git checkout -b release/0.2.0
 #### 2. Prepare Release
 
 - Update `VERSION` file: `0.2.0`
-- Update `package.json` version: `"version": "0.2.0"`
 - Update `CHANGELOG.md`:
   - Move `[Unreleased]` items to new `[0.2.0] - YYYY-MM-DD` section
   - Add release date
   - Update comparison links at bottom
-- Update any other version references
-
-#### 3. Commit Release Changes
 
 ```bash
-git add VERSION package.json CHANGELOG.md
+echo "0.2.0" > VERSION
+
+# Edit CHANGELOG.md to move unreleased items to [0.2.0] - 2024-02-12
+```
+
+#### 3. Commit and Push Release Branch
+
+```bash
+git add VERSION CHANGELOG.md
 git commit -m "chore(release): bump version to 0.2.0"
 git push origin release/0.2.0
 ```
 
-#### 4. Create Release PRs
+#### 4. Create PR to Main (Triggers Automated Release)
 
-1. **PR to `main`**: `release/0.2.0` → `main`
-   - Once merged, tag the release: `git tag v0.2.0`
-   - Push tag: `git push origin v0.2.0`
-   - Create GitHub Release from tag
+```bash
+gh pr create --base main --title "Release v0.2.0"
+```
 
-2. **PR to `develop`**: Merge `main` back into `develop` to sync
+Once this PR merges to `main`:
+- ✅ GitHub Actions automatically creates tag `v0.2.0`
+- ✅ GitHub Actions creates GitHub Release with changelog
+- ✅ Deployment pipelines triggered (if configured)
+
+#### 5. Merge Main Back to Develop
+
+After the release PR merges:
+
+```bash
+git checkout develop
+git pull origin develop
+git merge origin/main
+git push origin develop
+```
+
+This keeps `develop` in sync with the version bump.
 
 ## Semantic Versioning
 
@@ -234,57 +266,31 @@ Before submitting a PR, ensure:
 - [ ] Branch is up to date with target branch
 - [ ] No merge conflicts
 
-## Release Process
+## Automated Release System
 
-Releases are **fully automated** via GitHub Actions. No manual tagging required!
+Releases are **fully automated** via GitHub Actions when VERSION changes merge to `main`. No manual tagging required!
 
-### Creating a Release
+### How It Works
 
-**Step 1: Update VERSION and CHANGELOG**
-
-In your feature branch:
-
-```bash
-# Update version number (use semantic versioning)
-echo "0.2.0" > VERSION
-
-# Edit CHANGELOG.md - move items from [Unreleased] to new version
-## [0.2.0] - 2024-02-12
-
-### Added
-- New feature X
-- New feature Y
-
-### Fixed
-- Bug fix Z
-```
-
-**Step 2: Commit changes**
-
-```bash
-git add VERSION CHANGELOG.md
-git commit -m "chore(release): bump version to 0.2.0"
-```
-
-**Step 3: Create PR and merge**
-
-```bash
-git push origin feature/my-feature
-gh pr create --base main --title "chore(release): bump version to 0.2.0"
-
-# After review, merge to main
-```
-
-**Step 4: Automated release happens**
-
-When the PR merges to `main`:
+When a PR with VERSION file changes merges to `main`:
 1. `release.yml` workflow detects VERSION file change
-2. Creates git tag `v0.2.0`
-3. Extracts changelog entry
+2. Creates git tag `vX.Y.Z` automatically
+3. Extracts changelog entry for that version
 4. Creates GitHub release with notes
 5. Posts summary to workflow run
 
 **View releases:** https://github.com/jackmoch/lasso/releases
+
+### Creating a Release (Gitflow Approach)
+
+**IMPORTANT: Releases come from `release/*` branches, NOT feature branches!**
+
+Follow the "Release Process (Gitflow)" section above. In summary:
+
+1. Create `release/X.Y.Z` branch from `develop`
+2. Update `VERSION` and `CHANGELOG.md` in that branch
+3. PR `release/X.Y.Z` → `main` (automated release triggers on merge)
+4. Merge `main` back to `develop` to sync version
 
 ### Semantic Versioning
 
