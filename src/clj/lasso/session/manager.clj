@@ -3,6 +3,7 @@
   (:require [lasso.session.store :as store]
             [lasso.lastfm.client :as lastfm]
             [lasso.validation.schemas :as schemas]
+            [lasso.polling.scheduler :as scheduler]
             [taoensso.timbre :as log]))
 
 (defn validate-target-user
@@ -21,6 +22,14 @@
       (log/error e "Error validating target user" {:username target-username})
       {:valid? false
        :error "Failed to validate user"})))
+
+(defn can-start-session?
+  "Check if a new following session can be started.
+   Returns true if no active session exists."
+  [session-id]
+  (if-let [session (store/get-session session-id)]
+    (nil? (:following-session session))
+    false))
 
 (defn start-session
   "Start a new following session for the given session-id.
@@ -47,7 +56,10 @@
                          session
                          (assoc session :following-session following-session))))]
         (if updated
-          {:success true :session updated}
+          (do
+            ;; Start polling for this session
+            (scheduler/handle-session-state-change session-id :active)
+            {:success true :session updated})
           {:success false :error "Session not found"}))
       {:success false :error (:error validation)})))
 
@@ -71,6 +83,8 @@
                        session-id
                        (fn [session]
                          (assoc-in session [:following-session :state] :paused)))]
+          ;; Stop polling when paused
+          (scheduler/handle-session-state-change session-id :paused)
           {:success true :session updated})))
     {:success false :error "Session not found"}))
 
@@ -94,6 +108,8 @@
                        session-id
                        (fn [session]
                          (assoc-in session [:following-session :state] :active)))]
+          ;; Resume polling when resumed
+          (scheduler/handle-session-state-change session-id :active)
           {:success true :session updated})))
     {:success false :error "Session not found"}))
 
@@ -111,7 +127,10 @@
                      ;; No following session to stop
                      session)))]
     (if updated
-      {:success true :session updated}
+      (do
+        ;; Stop polling when session stopped
+        (scheduler/handle-session-state-change session-id :stopped)
+        {:success true :session updated})
       {:success false :error "Session not found"})))
 
 (defn get-session-status
