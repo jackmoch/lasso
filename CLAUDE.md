@@ -2,6 +2,26 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## 🚀 Quick Start for New Sessions
+
+**Starting a fresh Claude Code session? Read these files first:**
+
+1. **`STATUS.md`** - Current project state, what's done, what's in progress
+2. **`NEXT.md`** - Exactly what to work on next with implementation details
+3. **`MEMORY.md`** - Gotchas, patterns, and decisions (in `.claude/projects/.../memory/`)
+4. **This file** - Full project context and architecture
+
+**Ready to code?** Jump straight to `NEXT.md` and start with task #1.
+
+**Session Handoff Checklist:**
+- [ ] Read `STATUS.md` to understand current state
+- [ ] Check `NEXT.md` for immediate next task
+- [ ] Scan `MEMORY.md` for gotchas and patterns
+- [ ] Ensure on `develop` branch: `git checkout develop && git pull`
+- [ ] Review this file for project architecture (below)
+
+---
+
 ## Project Overview
 
 **Lasso** is a web application that enables Last.fm users to track their listening history during Spotify Jam sessions. When users participate in Spotify Jams as guests (non-owners), their listening activity is not scrobbled to Last.fm. Lasso solves this by allowing users to temporarily follow another Last.fm user and mirror their scrobbles in real-time.
