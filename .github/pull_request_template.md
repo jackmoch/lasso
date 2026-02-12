@@ -14,6 +14,7 @@
 - [ ] 🔨 Build/Config (build scripts, dependencies, configuration)
 - [ ] 🚀 Performance (performance improvements)
 - [ ] 🔒 Security (security-related changes)
+- [ ] 🎯 **Release (version bump - see Release Checklist below)**
 
 ## Changes Made
 
@@ -86,6 +87,51 @@
 
 - [ ] No breaking changes
 - [ ] Breaking changes (describe below)
+
+## 🎯 Release Checklist (FOR RELEASE PRs ONLY)
+
+<!-- If this is a release PR (release/* → main), complete this section -->
+<!-- Delete this section if NOT a release PR -->
+
+### Pre-Release Verification
+- [ ] All features/fixes for this release merged to develop
+- [ ] All tests passing on develop
+- [ ] VERSION file updated
+- [ ] CHANGELOG.md updated with release notes and date
+- [ ] Changelog comparison links updated
+
+### Post-Release Documentation Updates (CRITICAL)
+**After this PR merges to main, you MUST update these files on develop:**
+
+- [ ] **STATUS.md**
+  - [ ] Version updated at top
+  - [ ] Current sprint updated
+  - [ ] Completed work moved to "What's Been Completed"
+  - [ ] "What's In Progress" cleared
+  - [ ] Test metrics and key metrics updated
+
+- [ ] **NEXT.md**
+  - [ ] Immediate next task updated to upcoming sprint
+  - [ ] Completed tasks moved/removed
+
+- [ ] **CLAUDE.md**
+  - [ ] "Current Sprint" section updated
+  - [ ] Version updated in Quick Start
+  - [ ] Completed work added to "Completed" section
+
+- [ ] **docs/sprints/sprint-X-summary.md**
+  - [ ] New sprint summary created documenting completed work
+
+- [ ] **MEMORY.md** (in .claude/projects/.../memory/)
+  - [ ] New learnings and gotchas added
+
+### Post-Release Git Workflow
+- [ ] Merge main back to develop after release
+- [ ] Commit documentation updates to develop
+- [ ] Verify automated release created on GitHub
+- [ ] Verify git tag created
+
+**See CONTRIBUTING.md "Post-Release Documentation Updates" for detailed checklist.**
 
 ## Additional Context
 
