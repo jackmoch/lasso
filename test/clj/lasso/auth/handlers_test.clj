@@ -74,11 +74,11 @@
                                           {:session {:name "testuser"
                                                     :key "session-key-abc"}})]
       (let [request {:params {:token "authorized-token"}}
-            response (handlers/auth-callback-handler request)
-            body (parse-json-body response)]
-        (is (= 200 (:status response)))
-        (is (= "testuser" (:username body)))
-        ;; Verify session was created
+            response (handlers/auth-callback-handler request)]
+        ;; Verify redirect to frontend root
+        (is (= 302 (:status response)))
+        (is (= "/" (get-in response [:headers "Location"])))
+        ;; Verify session cookie was set
         (is (some? (extract-cookie response "session-id")))
         ;; Verify session exists in store
         (let [session-id (extract-cookie response "session-id")

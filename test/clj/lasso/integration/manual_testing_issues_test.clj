@@ -256,14 +256,15 @@
         ;; Step 2: Callback after user authorization
         (let [callback-response (auth-handlers/auth-callback-handler
                                 {:params {:token "test-token-123"}})
-              callback-body (parse-json-body callback-response)
               set-cookie-header (get-in callback-response [:headers "Set-Cookie"])
               ;; Set-Cookie can be a string or vector
               session-cookie (if (vector? set-cookie-header)
                               (first (filter #(.contains % "session-id=") set-cookie-header))
                               set-cookie-header)]
-          (is (= 200 (:status callback-response)))
-          (is (= "testuser" (:username callback-body)))
+          ;; Verify redirect to frontend root
+          (is (= 302 (:status callback-response)))
+          (is (= "/" (get-in callback-response [:headers "Location"])))
+          ;; Verify session cookie was set
           (is (some? session-cookie))
           (is (.contains session-cookie "session-id="))
 
