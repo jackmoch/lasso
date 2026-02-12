@@ -23,6 +23,14 @@
       {:valid? false
        :error "Failed to validate user"})))
 
+(defn can-start-session?
+  "Check if a new following session can be started.
+   Returns true if no active session exists."
+  [session-id]
+  (if-let [session (store/get-session session-id)]
+    (nil? (:following-session session))
+    false))
+
 (defn start-session
   "Start a new following session for the given session-id.
    Validates the target user exists before creating the session.

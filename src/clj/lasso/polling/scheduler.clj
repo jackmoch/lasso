@@ -4,6 +4,7 @@
             [lasso.session.store :as store]
             [lasso.config :as config]
             [clojure.core.async :as async :refer [go-loop <! >! timeout]]
+            [clojure.set :as set]
             [taoensso.timbre :as log]))
 
 (defonce active-pollers
@@ -82,11 +83,11 @@
         running-session-ids (set (keys @active-pollers))]
 
     ;; Stop pollers for sessions that are no longer active
-    (doseq [session-id (clojure.set/difference running-session-ids active-session-ids)]
+    (doseq [session-id (set/difference running-session-ids active-session-ids)]
       (stop-poller session-id))
 
     ;; Start pollers for active sessions that don't have one
-    (doseq [session-id (clojure.set/difference active-session-ids running-session-ids)]
+    (doseq [session-id (set/difference active-session-ids running-session-ids)]
       (start-poller session-id))))
 
 (defn stop-all-pollers

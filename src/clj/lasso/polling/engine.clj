@@ -101,18 +101,25 @@
                            {:session-id session-id
                             :target-username target-username})
 
-                  ;; Scrobble each new track
-                  (doseq [track new-tracks]
-                    (let [result (scrobble/scrobble-track track decrypted-key)]
-                      (when-not (:success result)
-                        (log/warn "Failed to scrobble track" {:track track
-                                                              :error result}))))
+                  ;; Scrobble each new track and track results
+                  (let [scrobble-results (for [track new-tracks]
+                                          (let [result (scrobble/scrobble-track track decrypted-key)]
+                                            {:track track
+                                             :success (:success result)
+                                             :result result}))
+                        successful-tracks (filter :success scrobble-results)
+                        failed-tracks (remove :success scrobble-results)]
 
-                  ;; Update cache with new tracks
-                  (let [new-keys (map track->cache-key new-tracks)
-                        updated-cache (into scrobble-cache new-keys)]
-                    {:scrobbled (count new-tracks)
-                     :new-cache updated-cache}))))))))
+                    ;; Log failures
+                    (doseq [{:keys [track result]} failed-tracks]
+                      (log/warn "Failed to scrobble track" {:track track
+                                                            :error result}))
+
+                    ;; Only cache successful scrobbles
+                    (let [successful-keys (map (comp track->cache-key :track) successful-tracks)
+                          updated-cache (into scrobble-cache successful-keys)]
+                      {:scrobbled (count successful-tracks)
+                       :new-cache updated-cache})))))))))
     (catch Exception e
       (log/error e "Error in poll-and-scrobble" {:session-id session-id})
       {:error "poll-failed"})))
