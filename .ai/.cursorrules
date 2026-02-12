@@ -1,0 +1,58 @@
+# Cursor Rules for Lasso Project
+
+## Quick Start
+
+For complete context, read these files in order:
+1. `STATUS.md` - Current project state
+2. `NEXT.md` - What to work on next
+3. `MEMORY.md` - Gotchas and patterns
+4. `CONTEXT.md` - Full project overview
+
+## Key Rules
+
+### Git Workflow
+- **ALWAYS** create feature branches from `develop`, NOT `main`
+- **ALWAYS** create PRs targeting `develop`, NOT `main`
+- Only release branches go to `main`
+
+### Code Style
+- Follow Clojure Style Guide
+- Max line length: 100 characters
+- Use descriptive function names
+- Write tests alongside implementation
+
+### Testing
+- Mock external APIs (Last.fm) in tests
+- Use `with-redefs` for function mocking
+- Avoid time-dependent assertions
+
+### Common Commands
+```bash
+# Development
+clj -M:dev:repl              # Backend REPL
+npx shadow-cljs watch app    # Frontend hot reload
+
+# Testing
+clj -M:test                  # Run all tests
+./scripts/wait-for-ci.sh 7   # Wait for CI on PR #7
+
+# Git (Gitflow)
+git checkout develop         # Start from develop
+git checkout -b feature/X    # Create feature branch
+gh pr create --base develop  # PR to develop!
+```
+
+### Critical Gotchas
+See `MEMORY.md` for full list. Top 3:
+1. PRs go to `develop`, not `main`
+2. Use wait-for-ci.sh instead of repeated polling
+3. Mock time-sensitive functions in tests
+
+### Last.fm API Constraints
+- Rate limit: 5 requests/second
+- OAuth 2.0 only (no passwords)
+- Polling interval: 15-30 seconds
+
+---
+
+For detailed context, architecture, and current status, see `CONTEXT.md`.
