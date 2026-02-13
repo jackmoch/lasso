@@ -87,7 +87,7 @@ jobs:
         id: backend-test
         run: |
           echo "🧪 Running backend tests..."
-          clj -M:test
+          clojure -M:test
 
       - name: Run frontend tests
         id: frontend-test
@@ -100,7 +100,7 @@ jobs:
         id: coverage
         run: |
           echo "📊 Generating test coverage..."
-          clj -M:coverage
+          clojure -M:coverage
         continue-on-error: true  # Don't fail build if coverage fails
 
       - name: Upload coverage to Codecov
