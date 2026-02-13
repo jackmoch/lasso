@@ -38,11 +38,10 @@
                                       (p/destroy-tree backend-proc)
                                       (Thread/sleep 500)
                                       (println "✅ All services stopped\n"))))
-           ;; Wait for either process to exit
-           (let [result (deref (future @shadow-proc) 100 :running)]
-             (when (not= result :running)
-               (println "\n⚠️  shadow-cljs exited unexpectedly"))
-             @backend-proc))}
+           ;; Keep main thread alive - both processes run in background
+           ;; Ctrl+C will trigger shutdown hook to clean up
+           (while true
+             (Thread/sleep 1000)))}
 
   repl
   {:doc "Start Clojure REPL with shadow-cljs integration"
