@@ -4,7 +4,7 @@
             [re-frame.core :as rf]
             [lasso.db :as db]
             [lasso.events]  ; Load event handlers
-            [lasso.test-utils-simple :as tu]))
+            [lasso.test-utils :as tu]))
 
 (use-fixtures :each tu/with-fresh-db)
 

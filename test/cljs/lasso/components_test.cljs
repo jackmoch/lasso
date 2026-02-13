@@ -6,7 +6,7 @@
             [lasso.components.session-controls :as session-controls]
             [lasso.components.activity-feed :as activity-feed]
             [lasso.components.error :as error]
-            [lasso.test-utils-simple :as tu]))
+            [lasso.test-utils :as tu]))
 
 (use-fixtures :each tu/with-fresh-db)
 

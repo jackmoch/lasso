@@ -1,5 +1,5 @@
-(ns lasso.test-utils-simple
-  "Simplified test utilities for Re-frame testing"
+(ns lasso.test-utils
+  "Test utilities for Re-frame testing"
   (:require [re-frame.core :as rf]
             [re-frame.db :as rf-db]
             [cljs.test :refer [is]]))

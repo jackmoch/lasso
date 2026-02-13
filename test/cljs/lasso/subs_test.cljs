@@ -4,7 +4,7 @@
             [re-frame.core :as rf]
             [re-frame.db :as rf-db]
             [lasso.subs]  ; Load subscriptions
-            [lasso.test-utils-simple :as tu]))
+            [lasso.test-utils :as tu]))
 
 (use-fixtures :each tu/with-fresh-db)
 
