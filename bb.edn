@@ -1,0 +1,199 @@
+{:min-bb-version "1.3.0"
+
+ :tasks
+ {:requires ([babashka.process :as p]
+             [clojure.string :as str])
+
+  :init
+  (def project-root (System/getProperty "user.dir"))
+
+  ;; Helper functions
+  -shell
+  {:requires ([babashka.process :refer [shell]])
+   :task (apply shell args)}
+
+  ;; Development tasks
+  dev
+  {:doc "Start full development environment (backend + frontend + auto-reload)"
+   :task (let [shadow-proc (p/process ["npx" "shadow-cljs" "watch" "app"]
+                                      {:inherit true
+                                       :shutdown p/destroy-tree})
+               backend-proc (p/process ["clj" "-M:dev" "-e"
+                                       "(do (require 'user) (user/start-backend) (println \"\\n✅ Backend ready on http://localhost:8080\\n\") (clojure.main/repl))"]
+                                      {:inherit true
+                                       :shutdown p/destroy-tree})]
+           (println "\n🚀 Starting Lasso development environment...")
+           (println "   • Frontend: shadow-cljs watch (port 8280)")
+           (println "   • Backend: Pedestal server (port 8080) + REPL\n")
+           (println "⏳ Waiting for services to start...")
+           (println "   Watch for:")
+           (println "   - shadow-cljs: '[:app] Build completed'")
+           (println "   - backend: '✅ Backend ready'\n")
+           (println "📝 Press Ctrl+C to stop all services\n")
+           ;; Add shutdown hook for clean exit
+           (.addShutdownHook (Runtime/getRuntime)
+                            (Thread. (fn []
+                                      (println "\n\n👋 Shutting down services...")
+                                      (p/destroy-tree shadow-proc)
+                                      (p/destroy-tree backend-proc)
+                                      (Thread/sleep 500)
+                                      (println "✅ All services stopped\n"))))
+           ;; Keep main thread alive - both processes run in background
+           ;; Ctrl+C will trigger shutdown hook to clean up
+           (while true
+             (Thread/sleep 1000)))}
+
+  repl
+  {:doc "Start Clojure REPL with shadow-cljs integration"
+   :override-builtin true
+   :task (shell "clj -M:dev")}
+
+  cljs-repl
+  {:doc "Start ClojureScript REPL (requires dev environment running)"
+   :task (shell "npx shadow-cljs cljs-repl app")}
+
+  ;; Frontend tasks
+  frontend
+  {:doc "Start frontend watch only (shadow-cljs)"
+   :task (shell "npx shadow-cljs watch app")}
+
+  frontend:build
+  {:doc "Build frontend for production"
+   :task (shell "npx shadow-cljs release app")}
+
+  frontend:check
+  {:doc "Check frontend compilation (no output)"
+   :task (shell "npx shadow-cljs check app")}
+
+  backend
+  {:doc "Start backend server only (use when running shadow-cljs separately)"
+   :task (shell "clj -M:dev -e \"(do (require 'user) (user/start-backend) (println \\\"\\n✅ Backend ready on http://localhost:8080\\nREPL available. Type (stop-backend) to stop.\\n\\\") (clojure.main/repl))\"")}
+
+  ;; CSS tasks
+  css
+  {:doc "Watch and rebuild Tailwind CSS"
+   :task (shell "npm run watch:css")}
+
+  css:build
+  {:doc "Build Tailwind CSS for production"
+   :task (shell "npm run build:css")}
+
+  ;; Testing tasks
+  test
+  {:doc "Run all backend tests"
+   :task (shell "clj -M:test")}
+
+  test:watch
+  {:doc "Run tests in watch mode"
+   :task (shell "clj -M:test --watch")}
+
+  test:focus
+  {:doc "Run specific test namespace (usage: bb test:focus <namespace>)"
+   :task (shell (str "clj -M:test --focus " (first *command-line-args*)))}
+
+  ;; Build tasks
+  build
+  {:doc "Build all production artifacts (frontend + CSS + uberjar)"
+   :task (do
+           (println "🔨 Building frontend...")
+           (shell "npx shadow-cljs release app")
+           (println "🎨 Building CSS...")
+           (shell "npm run build:css")
+           (println "📦 Building uberjar...")
+           (shell "clj -X:uberjar")
+           (println "✅ Build complete!"))}
+
+  uberjar
+  {:doc "Build backend uberjar only"
+   :override-builtin true
+   :task (shell "clj -X:uberjar")}
+
+  ;; Linting tasks
+  lint
+  {:doc "Lint Clojure/ClojureScript code with clj-kondo"
+   :task (shell "clj-kondo --lint src test")}
+
+  lint:fix
+  {:doc "Auto-fix linting issues where possible"
+   :task (shell "clj-kondo --lint src test --auto-fix")}
+
+  format
+  {:doc "Format code with cljfmt"
+   :task (shell "clj -M:cljfmt fix")}
+
+  ;; Cleaning tasks
+  clean
+  {:doc "Clean all build artifacts"
+   :task (do
+           (println "🧹 Cleaning build artifacts...")
+           (shell "rm -rf target .cpcache .shadow-cljs resources/public/js resources/public/css/tailwind.css node_modules/.cache")
+           (println "✅ Clean complete!"))}
+
+  clean:frontend
+  {:doc "Clean frontend build cache and artifacts (shadow-cljs)"
+   :task (do
+           (println "🧹 Cleaning frontend cache...")
+           (shell "rm -rf .shadow-cljs resources/public/js node_modules/.cache")
+           (println "✅ Frontend cache cleaned! Run 'bb frontend' or 'bb dev' to rebuild."))}
+
+  clean:full
+  {:doc "Full clean including node_modules and deps"
+   :task (do
+           (println "🧹 Full clean...")
+           (shell "rm -rf target .cpcache .shadow-cljs resources/public/js resources/public/css/tailwind.css node_modules .nrepl-port")
+           (println "✅ Full clean complete! Run 'npm install' to restore dependencies."))}
+
+  ;; Docker tasks
+  docker:build
+  {:doc "Build Docker image"
+   :task (shell "docker build -t lasso:latest .")}
+
+  docker:run
+  {:doc "Run Docker container locally"
+   :task (shell "docker run -p 8080:8080 --env-file .env lasso:latest")}
+
+  ;; Git workflow helpers
+  pr
+  {:doc "Create PR to develop branch"
+   :task (shell "gh pr create --base develop")}
+
+  pr:main
+  {:doc "Create release PR to main branch"
+   :task (shell "gh pr create --base main")}
+
+  ci:wait
+  {:doc "Wait for CI to complete on PR (usage: bb ci:wait <pr-number>)"
+   :task (shell (str "./scripts/wait-for-ci.sh " (first *command-line-args*)))}
+
+  ;; Utility tasks
+  deps
+  {:doc "Download and cache dependencies"
+   :task (do
+           (shell "clj -P")
+           (shell "npm install"))}
+
+  outdated
+  {:doc "Check for outdated dependencies"
+   :task (do
+           (println "📦 Checking Clojure dependencies...")
+           (shell "clj -M:outdated")
+           (println "\n📦 Checking npm dependencies...")
+           (shell "npm outdated"))}
+
+  server
+  {:doc "Start production server from uberjar"
+   :task (shell "java -jar target/lasso.jar")}
+
+  ;; Help
+  help
+  {:doc "Show all available tasks"
+   :override-builtin true
+   :task (do
+           (println "\n🎯 Lasso Development Tasks\n")
+           (println "Common workflows:")
+           (println "  bb dev           - Start full development environment")
+           (println "  bb test          - Run tests")
+           (println "  bb build         - Build production artifacts")
+           (println "  bb clean         - Clean build artifacts")
+           (println "\nFor full task list, run: bb tasks")
+           (println "For task details, run: bb <task> --help\n"))}}}

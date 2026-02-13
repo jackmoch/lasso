@@ -11,6 +11,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 3. **`MEMORY.md`** - Gotchas, patterns, and decisions (in `.claude/projects/.../memory/`)
 4. **This file** - Full project context and architecture
 
+**Note:** These documentation files are always current because Claude Code automatically updates them after every release as part of the autonomous workflow (see "Creating Releases" section below).
+
 **Ready to code?** Jump straight to `NEXT.md` and start with task #1.
 
 **Session Handoff Checklist:**
@@ -53,39 +55,70 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Common Commands
 
-### Development
+### Development (Quick Start)
+
+**🎯 Recommended: One-command startup (Babashka)**
 
 ```bash
-# Start backend REPL (Terminal 1)
-clj -M:dev:repl
-# In REPL: (user/start) to start server
+# Install babashka (one-time setup)
+brew install babashka  # macOS
+# or see: https://github.com/babashka/babashka#installation
 
-# Start frontend with hot reload (Terminal 2)
-npx shadow-cljs watch app
+# Start everything (backend + frontend + hot reload)
+bb dev
 
-# Watch CSS changes (Terminal 3)
-npm run watch:css
-# or build once:
-npm run build:css
+# That's it! Open http://localhost:8080
+# Use Ctrl+C to stop everything
+```
+
+**Alternative: REPL-driven workflow (shadow-cljs integrated)**
+
+```bash
+# Start REPL with integrated shadow-cljs
+clj -M:dev
+
+# In REPL: Start everything with one command
+user=> (start)   ; or (go)
+; ✅ Ready! Open http://localhost:8080
 
 # REPL utilities
-(user/start)    # Start server
-(user/stop)     # Stop server
-(user/restart)  # Restart server
-(user/reset)    # Stop, reload namespaces, restart
+(stop)          # Stop backend + frontend
+(restart)       # Restart everything
+(reset)         # Reload namespaces + restart
+(cljs-repl)     # Start ClojureScript REPL
+(start-backend) # Start only backend
+(start-frontend)# Start only frontend
+```
+
+**Manual control (individual processes)**
+
+```bash
+# Start frontend only
+bb frontend
+# or: npx shadow-cljs watch app
+
+# Start CSS watch only
+bb css
+# or: npm run watch:css
 ```
 
 ### Testing
 
 ```bash
 # Backend tests
-clj -M:test
+bb test
+# or: clj -M:test
 
 # Run specific test namespace
-clj -M:test --focus lasso.auth.core-test
+bb test:focus lasso.auth.core-test
+# or: clj -M:test --focus lasso.auth.core-test
+
+# Watch mode (auto-run on file changes)
+bb test:watch
 
 # Lint code
-clj-kondo --lint src
+bb lint
+# or: clj-kondo --lint src test
 
 # Frontend tests (when implemented)
 npx shadow-cljs compile test
@@ -95,21 +128,26 @@ node target/test.js
 ### Building
 
 ```bash
-# Production frontend build
-npx shadow-cljs release app
+# Build all production artifacts (frontend + CSS + uberjar)
+bb build
 
-# Minified CSS
-npm run build:css
-
-# Backend uberjar
-clj -X:uberjar
+# Or build individually:
+bb frontend:build  # Frontend only
+bb css:build       # CSS only
+bb uberjar         # Backend only
 
 # Docker image
-docker build -t lasso:latest .
+bb docker:build
+# or: docker build -t lasso:latest .
 
 # Clean build artifacts
-npm run clean
-rm -rf target .cpcache
+bb clean
+
+# Full clean (including node_modules)
+bb clean:full
+
+# See all available tasks
+bb tasks
 ```
 
 ## Architecture
@@ -202,14 +240,35 @@ src/
 
 ## Development Workflow
 
+### Integrated Development Environment
+
+**One-command startup** brings up the entire development environment:
+- Backend server (Pedestal + Jetty)
+- Frontend watch (shadow-cljs with hot reload)
+- ClojureScript compilation
+- All in one REPL session
+
+**Two approaches:**
+
+**1. Babashka Tasks (Simplest)**
+```bash
+bb dev  # Starts integrated REPL with everything running
+```
+
+**2. Direct REPL (More control)**
+```bash
+clj -M:dev:repl
+user=> (start)  # Starts backend + frontend watch
+```
+
 ### REPL-Driven Development
 
-The backend uses REPL-driven development:
-1. Start REPL with `clj -M:dev:repl`
-2. Evaluate `(user/start)` to start server
-3. Make code changes
-4. Reload with `(user/restart)` or `(user/reset)` for full namespace reload
-5. Test functions directly in REPL
+The integrated REPL provides:
+1. **Auto-start**: `(start)` or `(go)` starts backend + frontend together
+2. **Hot reload**: Both Clojure and ClojureScript changes reload automatically
+3. **Namespace refresh**: `(reset)` reloads all Clojure namespaces
+4. **ClojureScript REPL**: `(cljs-repl)` connects to browser for interactive CLJS development
+5. **Individual control**: `(start-backend)`, `(start-frontend)` for granular control
 
 ### Frontend Hot Reload
 
@@ -218,6 +277,25 @@ shadow-cljs provides instant feedback:
 2. Save - changes appear immediately in browser
 3. Re-frame state preserved across reloads
 4. Check browser console for compilation errors
+5. No need to restart - shadow-cljs handles everything
+
+### Backend Development
+
+Clojure backend changes:
+1. **Simple changes**: Just reload the namespace in REPL
+2. **Route/handler changes**: `(user/restart)` to reload routes
+3. **Deep changes**: `(user/reset)` to reload all namespaces
+4. **No server restart needed** for most changes
+
+### ClojureScript REPL
+
+Connect to the browser for interactive ClojureScript development:
+```clojure
+user=> (cljs-repl)
+; Opens CLJS REPL connected to browser
+cljs.user=> (js/alert "Hello from REPL!")
+cljs.user=> :cljs/quit  ; Return to Clojure REPL
+```
 
 ### Gitflow Workflow (IMPORTANT)
 
@@ -235,24 +313,93 @@ git push -u origin feature/sprint-5-frontend
 gh pr create --base develop --title "feat(ui): Sprint 5 frontend implementation"
 ```
 
-**Creating Releases:**
+**Creating Releases (Autonomous Process):**
+
+**IMPORTANT FOR CLAUDE CODE:** When completing a sprint/release, you MUST autonomously handle the entire release process including all documentation updates. This is NOT a manual process for the user.
+
+**Step 1: Prepare Release Branch**
 ```bash
-# Branch from develop when ready to release
 git checkout develop
-git checkout -b release/0.2.0
+git pull origin develop
+git checkout -b release/X.Y.Z
 
-# Update VERSION and CHANGELOG, commit
-echo "0.2.0" > VERSION
-git commit -m "chore(release): bump version to 0.2.0"
+# Update VERSION file
+echo "X.Y.Z" > VERSION
 
-# PR to main triggers automated release
-gh pr create --base main --title "Release v0.2.0"
+# Update CHANGELOG.md (move [Unreleased] to [X.Y.Z] with date)
+# Edit CHANGELOG.md to finalize release notes
 
-# After merge, sync develop with main
-git checkout develop && git merge main
+git add VERSION CHANGELOG.md
+git commit -m "chore(release): bump version to X.Y.Z"
+git push -u origin release/X.Y.Z
+
+# Create PR to main
+gh pr create --base main --title "Release vX.Y.Z"
 ```
 
-**See CONTRIBUTING.md for complete gitflow documentation.**
+**Step 2: After PR Merges to Main - AUTOMATIC DOCUMENTATION UPDATES**
+
+**CRITICAL:** After the release PR merges, you (Claude Code) MUST automatically update ALL project documentation files. This is part of the autonomous release workflow.
+
+```bash
+# Sync develop with main
+git checkout develop
+git pull origin develop
+git merge origin/main
+git push origin develop
+
+# NOW UPDATE ALL DOCUMENTATION FILES:
+```
+
+**Required Documentation Updates (Autonomous):**
+
+1. **STATUS.md** - Update project status
+   - Update version at top (`**Version:** vX.Y.Z`)
+   - Update current sprint
+   - Move completed work to "What's Been Completed"
+   - Clear "What's In Progress" section
+   - Update test metrics and key metrics
+   - Update branch status diagram
+
+2. **NEXT.md** - Update immediate next task
+   - Change immediate next task to upcoming sprint/phase
+   - Remove/archive completed tasks
+   - Update acceptance criteria and goals
+
+3. **CLAUDE.md** - Update project overview (this file)
+   - Update "Current Sprint" section
+   - Update "Version" in Quick Start
+   - Add completed work to "Completed" section
+   - Update "Current Project Status"
+
+4. **docs/sprints/sprint-X-summary.md** - Create sprint summary
+   - Create new file documenting completed sprint
+   - List all accomplishments and files created/modified
+   - Include test metrics, verification results
+   - Document key decisions and lessons learned
+   - Use existing sprint summaries as template
+
+5. **MEMORY.md** - Update learnings (in `.claude/projects/.../memory/`)
+   - Add new gotchas and patterns discovered
+   - Document what worked well
+   - Update common errors and fixes
+   - Keep concise (under 200 lines)
+
+**Commit Documentation Updates:**
+```bash
+git add STATUS.md NEXT.md CLAUDE.md docs/sprints/sprint-X-summary.md
+git commit -m "docs: update all project documentation after vX.Y.Z release"
+git push origin develop
+```
+
+**Why This Matters:** Keeping documentation synchronized ensures that new Claude Code sessions have accurate context about project state, completed work, and next steps. Missing documentation updates cause confusion and outdated task lists.
+
+**Automation Helpers:**
+- `scripts/prepare-release.sh` - Interactive script for manual releases (fallback)
+- CONTRIBUTING.md "Post-Release Documentation Updates" - Detailed checklist
+- PR template includes release checklist for visibility
+
+**See CONTRIBUTING.md for detailed release process documentation.**
 
 ### Making Changes
 
@@ -344,7 +491,7 @@ gcloud run deploy lasso --image gcr.io/PROJECT_ID/lasso --platform managed --reg
 
 ## Current Project Status
 
-**Current Sprint**: Sprint 3-4 (Backend Development - In Progress)
+**Current Sprint**: Sprint 5-6 (Frontend Development - Not Started)
 
 **Completed:**
 - ✅ **Sprint 2**: Development environment and project scaffolding
@@ -364,24 +511,30 @@ gcloud run deploy lasso --image gcr.io/PROJECT_ID/lasso --platform managed --reg
   - Branch protection requires passing `lint-and-build` check
   - Automated release workflow triggered on VERSION changes to `main`
 
-- ✅ **Sprint 3-4 Phase 1-3**: Backend foundation
+- ✅ **Sprint 3-4**: Complete Backend Implementation (Released v0.2.0 on 2026-02-12)
   - Last.fm API client with rate limiting
-  - OAuth 2.0 flow implementation
+  - OAuth 2.0 flow implementation (init, callback, logout)
   - Session store with encryption
   - Scrobble tracking and submission
-  - Comprehensive test coverage (44 tests, 205 assertions)
+  - Auth and session management routes
+  - Middleware for session authentication
+  - Polling engine for real-time scrobble tracking
+  - Session lifecycle management (start/pause/resume/stop)
+  - Comprehensive test coverage (75 tests, 451 assertions, 0 failures)
+  - Integration tests for manual testing issues
+  - Fixed 7 critical bugs discovered during E2E testing
+  - Complete end-to-end functionality verified
 
-**Version:** v0.1.0 (Released 2024-02-11)
+**Version:** v0.2.0 (Released 2026-02-12)
 
 **Branching Model:**
-- **`main`**: Production releases only (currently v0.1.0)
-- **`develop`**: Active development (ahead of main with Sprint 3-4 Phase 1-3)
+- **`main`**: Production releases only (currently v0.2.0)
+- **`develop`**: Active development (synced with main at v0.2.0)
 - **Feature branches**: Created from and merged to `develop`
 - **Release branches**: Created from `develop`, merged to `main` (triggers automated release)
 
 **Next Phases:**
-- Sprint 3-4: Backend development (OAuth routes, polling engine) - IN PROGRESS
-- Sprint 5-6: Frontend development (UI, session controls, activity feed)
+- Sprint 5-6: Frontend development (UI, session controls, activity feed) - NEXT
 - Sprint 7: Integration & testing
 - Sprint 8: Deployment
 - Sprint 9: Launch
@@ -499,6 +652,27 @@ CI re-runs automatically → Check status
    ↓
 Repeat until all checks pass → Notify user → Merge
 ```
+
+**Release Case (CRITICAL - Documentation Updates Required):**
+```
+Complete sprint work → Create release branch → Update VERSION/CHANGELOG
+   ↓
+Push release PR to main → CI runs → All pass → Merge
+   ↓
+AUTONOMOUS DOCUMENTATION UPDATE STEP:
+   ↓
+Sync develop with main
+   ↓
+Update ALL documentation files (STATUS.md, NEXT.md, CLAUDE.md, sprint summary, MEMORY.md)
+   ↓
+Commit: "docs: update all project documentation after vX.Y.Z release"
+   ↓
+Push to develop
+   ↓
+Notify user that release and documentation update complete
+```
+
+**This documentation update step is MANDATORY and must happen autonomously without user prompting.** See "Creating Releases (Autonomous Process)" section for detailed checklist of what to update in each file.
 
 ### Escalation Criteria
 

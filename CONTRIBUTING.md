@@ -341,14 +341,79 @@ Follow [Keep a Changelog](https://keepachangelog.com/):
 
 ### Release Checklist
 
-Before creating a version bump PR:
+#### Pre-Release (Before Creating Release Branch)
 
-- [ ] All features/fixes for this release are merged
-- [ ] CHANGELOG.md updated with all changes
-- [ ] VERSION file updated with new version number
-- [ ] Changelog comparison links updated
+- [ ] All features/fixes for this release are merged to `develop`
+- [ ] All tests passing on `develop`
 - [ ] All CI checks passing
-- [ ] Documentation reflects new version
+- [ ] Sprint work completed and tested
+
+#### Release Branch Preparation
+
+- [ ] Create release branch: `git checkout -b release/X.Y.Z`
+- [ ] Update VERSION file with new version number
+- [ ] Update CHANGELOG.md:
+  - [ ] Move `[Unreleased]` items to new `[X.Y.Z] - YYYY-MM-DD` section
+  - [ ] Add release date
+  - [ ] Update comparison links at bottom
+- [ ] Commit changes: `git commit -m "chore(release): bump version to X.Y.Z"`
+
+#### Post-Release Documentation Updates (CRITICAL)
+
+**After the release PR merges to `main`, update ALL project documentation:**
+
+- [ ] **STATUS.md** - Update current state
+  - [ ] Update version at top
+  - [ ] Update current sprint
+  - [ ] Move completed work to "What's Been Completed" section
+  - [ ] Clear "What's In Progress" section
+  - [ ] Update test metrics and key metrics
+  - [ ] Update branch status diagram
+
+- [ ] **NEXT.md** - Update immediate next task
+  - [ ] Change immediate next task to upcoming sprint/phase
+  - [ ] Move completed tasks to backlog or remove
+  - [ ] Update task descriptions and acceptance criteria
+
+- [ ] **CLAUDE.md** - Update project overview
+  - [ ] Update "Current Sprint" section
+  - [ ] Update "Version" in Quick Start
+  - [ ] Add completed work to "Completed" section
+  - [ ] Update "Current Status" with new branch state
+
+- [ ] **docs/sprints/sprint-X-summary.md** - Create sprint summary
+  - [ ] Create new file for completed sprint
+  - [ ] Document what was accomplished
+  - [ ] List all files created/modified
+  - [ ] Include test metrics and verification results
+  - [ ] Document key decisions and lessons learned
+  - [ ] Add git workflow details
+
+- [ ] **MEMORY.md** - Update learnings (in `.claude/projects/.../memory/`)
+  - [ ] Add any new gotchas discovered
+  - [ ] Document patterns that worked well
+  - [ ] Update common errors and fixes
+  - [ ] Keep concise (under 200 lines)
+
+#### Post-Release Sync
+
+- [ ] Merge `main` back to `develop`:
+  ```bash
+  git checkout develop
+  git pull origin develop
+  git merge origin/main
+  git push origin develop
+  ```
+- [ ] Commit documentation updates:
+  ```bash
+  git add STATUS.md NEXT.md CLAUDE.md docs/sprints/sprint-X-summary.md
+  git commit -m "docs: update all project documentation after vX.Y.Z release"
+  git push origin develop
+  ```
+- [ ] Verify automated release created on GitHub
+- [ ] Verify git tag created: `git tag -l`
+
+**💡 Tip:** Use `scripts/prepare-release.sh` to help automate version bumps and documentation reminders.
 
 ## Getting Help
 

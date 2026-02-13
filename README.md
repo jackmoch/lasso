@@ -37,6 +37,7 @@ Lasso enables Last.fm users to scrobble their listening history during Spotify J
 - Clojure CLI (tools.deps)
 - Node.js 18 or higher
 - npm
+- **Babashka** (recommended for simplified development workflow) - [Installation guide](https://github.com/babashka/babashka#installation)
 - Docker (optional, for containerized deployment)
 - Last.fm API credentials ([Register here](https://www.last.fm/api/account/create))
 
@@ -80,26 +81,46 @@ npm run build:css
 
 ### 4. Start development environment
 
-Open three terminal windows:
+**🎯 Recommended: One-command startup with Babashka**
 
-**Terminal 1 - Backend REPL:**
 ```bash
-clj -M:dev:repl
+# Install babashka (one-time setup)
+brew install babashka  # macOS
+# See https://github.com/babashka/babashka#installation for other platforms
+
+# Start everything (backend + frontend + hot reload)
+bb dev
+```
+
+That's it! The integrated REPL will start with both backend and frontend running.
+
+**Alternative: Direct REPL control**
+
+```bash
+clj -M:dev
 ```
 
 Once the REPL starts, run:
 ```clojure
-user=> (start)
+user=> (start)  ; Starts backend + frontend watch together
 ```
 
-**Terminal 2 - Frontend hot reload:**
-```bash
-npx shadow-cljs watch app
-```
+**Manual control (individual processes)**
 
-**Terminal 3 - CSS watch:**
+If you prefer to control each process separately:
+
 ```bash
-npm run watch:css
+# Terminal 1 - Backend only
+clj -M:dev
+user=> (start-backend)
+
+# Terminal 2 - Frontend only
+bb frontend
+# or: npx shadow-cljs watch app
+
+# Terminal 3 - CSS watch (optional)
+bb css
+# or: npm run watch:css
 ```
 
 ### 5. Open the application
@@ -110,22 +131,50 @@ The frontend development server also runs on [http://localhost:8280](http://loca
 
 ## Development Workflow
 
-### REPL Commands
+### Integrated REPL
 
-The backend uses REPL-driven development. Available commands in the `user` namespace:
+The development environment uses an integrated REPL with shadow-cljs, giving you full control over both backend and frontend from one place.
+
+**REPL Commands (in `user` namespace):**
 
 ```clojure
-(start)    ; Start the server
-(stop)     ; Stop the server
-(restart)  ; Restart the server
-(reset)    ; Stop, reload namespaces, and restart
+(start)          ; Start backend + frontend together (or use 'go')
+(stop)           ; Stop everything
+(restart)        ; Restart everything
+(reset)          ; Reload namespaces + restart
+
+; Individual control
+(start-backend)  ; Start only backend server
+(stop-backend)   ; Stop only backend
+(start-frontend) ; Start only frontend watch
+(stop-frontend)  ; Stop only frontend
+
+; ClojureScript REPL
+(cljs-repl)      ; Connect to browser for interactive CLJS development
 ```
 
 ### Hot Reload
 
-- **Frontend**: Edit any `.cljs` file and save - changes appear instantly in the browser
-- **Backend**: Use `(restart)` or `(reset)` in the REPL after editing `.clj` files
-- **CSS**: Automatically rebuilds when using `npm run watch:css`
+Everything reloads automatically:
+- **Frontend**: Edit `.cljs` files → instant browser update (state preserved)
+- **Backend**: Edit `.clj` files → use `(restart)` or `(reset)` in REPL
+- **CSS**: Edit Tailwind classes → automatic rebuild (when using `bb css`)
+
+### Babashka Tasks
+
+Quick commands for common operations:
+
+```bash
+bb dev           # Start full development environment
+bb test          # Run all tests
+bb test:watch    # Run tests in watch mode
+bb build         # Build production artifacts
+bb clean         # Clean build artifacts
+bb lint          # Lint code
+bb tasks         # List all available tasks
+```
+
+See `bb.edn` for all available tasks.
 
 ### Project Structure
 

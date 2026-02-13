@@ -1,19 +1,19 @@
 # Project Status
 
 **Last Updated:** 2026-02-12
-**Current Sprint:** Sprint 3-4 (Backend Development)
+**Current Sprint:** Sprint 5-6 (Frontend Development - In Progress)
 **Project Phase:** Alpha Development (Pre-Launch)
 
 ---
 
 ## Quick Status
 
-- **Version:** v0.1.0 (released 2024-02-11)
-- **Main Branch:** Production-ready, deployed
-- **Develop Branch:** 2 commits ahead (gitflow setup, CI improvements)
-- **Active Work:** Sprint 3-4 Phase 4-6 (OAuth routes, polling engine)
+- **Version:** v0.2.0 (released 2026-02-12)
+- **Main Branch:** Production-ready v0.2.0, backend fully functional
+- **Develop Branch:** Synced with main at v0.2.0
+- **Active Work:** `feature/sprint-5-6-frontend-wip` - Frontend complete, bug fixes applied
 - **Blockers:** None
-- **Next Milestone:** v0.2.0 (Sprint 3-4 completion)
+- **Next Milestone:** v0.3.0 (Sprint 5-6: Complete + E2E testing)
 
 ---
 
@@ -33,87 +33,98 @@
 - [x] CI requires passing `lint-and-build` check
 - [x] Documentation updated for gitflow workflow
 
-### CI Improvements (2026-02-12) ✅
-- [x] Fixed duplicate CI runs (removed `pull_request_target`)
-- [x] Added duration tracking to CI workflow
-- [x] Created `scripts/wait-for-ci.sh` for intelligent waiting
-- [x] PR comments now include run duration
+### Sprint 3-4: Complete Backend Implementation ✅ (v0.2.0)
 
-### Sprint 3-4 Phase 1-3: Backend Foundation ✅
-- [x] Last.fm API client with rate limiting (`src/clj/lasso/lastfm/client.clj`)
-- [x] OAuth 2.0 implementation (`src/clj/lasso/lastfm/oauth.clj`)
-- [x] Session store with encryption (`src/clj/lasso/session/store.clj`, `src/clj/lasso/util/crypto.clj`)
-- [x] Scrobble tracking logic (`src/clj/lasso/lastfm/scrobble.clj`)
-- [x] HTTP utilities (`src/clj/lasso/util/http.clj`)
-- [x] Validation schemas (`src/clj/lasso/validation/schemas.clj`)
-- [x] Comprehensive test coverage (44 tests, 205 assertions)
-- [x] Fixed flaky rate-limiting test
+**Phase 1-3: Backend Foundation**
+- [x] Last.fm API client with rate limiting
+- [x] OAuth 2.0 implementation
+- [x] Session store with encryption
+- [x] Scrobble tracking logic
+- [x] HTTP utilities
+- [x] Validation schemas
 
-**Files Added (Phase 1-3):**
+**Phase 4-6: Routes & Polling**
+- [x] OAuth routes (init, callback, logout)
+- [x] Session management routes (start, pause, resume, stop, status)
+- [x] Authentication middleware
+- [x] Polling engine for real-time scrobble tracking
+- [x] Polling scheduler with core.async
+- [x] Session lifecycle manager
+
+**Bug Fixes & Testing (v0.2.0)**
+- [x] Fixed handler return values (removed incorrect wrapper)
+- [x] Fixed middleware session attachment
+- [x] Fixed JSON body parsing from InputStreams
+- [x] Fixed HTTP method selection (GET vs POST)
+- [x] Fixed scrobble response parsing
+- [x] Fixed environment configuration loading
+- [x] Comprehensive integration tests (75 tests, 451 assertions)
+- [x] Manual E2E testing completed successfully
+
+**Files Implemented:**
 ```
 src/clj/lasso/
-├── auth/session.clj          ✅ Session management
+├── auth/
+│   ├── handlers.clj              ✅ OAuth handlers
+│   └── session.clj               ✅ Session management
 ├── lastfm/
-│   ├── client.clj             ✅ API client with rate limiting
-│   ├── oauth.clj              ✅ OAuth flow
-│   └── scrobble.clj           ✅ Scrobble operations
-├── session/store.clj          ✅ Session storage
-├── util/
-│   ├── crypto.clj             ✅ Encryption utilities
-│   └── http.clj               ✅ HTTP utilities
-└── validation/schemas.clj     ✅ Malli schemas
+│   ├── client.clj                ✅ API client (GET/POST support)
+│   ├── oauth.clj                 ✅ OAuth flow
+│   └── scrobble.clj              ✅ Scrobble operations
+├── middleware.clj                ✅ Auth interceptor
+├── polling/
+│   ├── engine.clj                ✅ Polling orchestration
+│   └── scheduler.clj             ✅ Scheduling logic
+├── session/
+│   ├── handlers.clj              ✅ Session route handlers
+│   ├── manager.clj               ✅ Session lifecycle
+│   └── store.clj                 ✅ Session storage
+└── util/
+    ├── crypto.clj                ✅ Encryption
+    └── http.clj                  ✅ HTTP utilities
 
-test/clj/lasso/               ✅ Full test coverage
+test/clj/lasso/                   ✅ Full test coverage
+└── integration/
+    └── manual_testing_issues_test.clj  ✅ E2E integration tests
 ```
 
 ---
 
 ## What's In Progress
 
-### Sprint 3-4 Phase 4-6: Routes & Polling ⏳
+**Sprint 5-6: Frontend Development (95% Complete)**
 
-**Not Yet Started:**
-- [ ] OAuth routes (`src/clj/lasso/routes.clj`)
-  - `/api/auth/init` - Initialize OAuth flow
-  - `/api/auth/callback` - OAuth callback handler
-  - `/api/auth/logout` - Destroy session
+Branch: `feature/sprint-5-6-frontend-wip`
 
-- [ ] Session management routes
-  - `/api/session/start` - Start following target user
-  - `/api/session/pause` - Pause active session
-  - `/api/session/resume` - Resume paused session
-  - `/api/session/stop` - Stop and clear session
-  - `/api/session/status` - Get current status
+Completed:
+- ✅ Complete Re-frame architecture (db, events, subs)
+- ✅ Full API client implementation
+- ✅ Authentication UI (login/logout)
+- ✅ Session controls (start/pause/resume/stop)
+- ✅ Activity feed with real-time polling
+- ✅ Error handling and loading states
+- ✅ Tailwind CSS styling
+- ✅ **BUG FIX:** OAuth web flow (callback redirect working)
+- ✅ **BUG FIX:** Timestamp filtering (5min lookback, no old scrobbles)
 
-- [ ] Polling engine (`src/clj/lasso/polling/engine.clj`)
-  - Poll target user's recent tracks every 15-30s
-  - Identify new scrobbles
-  - Submit to authenticated user's account
-  - Handle rate limiting and errors
-
-- [ ] Polling scheduler (`src/clj/lasso/polling/scheduler.clj`)
-  - Manage polling intervals
-  - Start/stop/pause session polling
-  - Concurrent session handling
-
-- [ ] Session manager (`src/clj/lasso/session/manager.clj`)
-  - Session lifecycle management
-  - State transitions (not-started → active → paused → stopped)
-
-**See:** `docs/tasks/sprint-3-4-implementation-plan.md` for detailed breakdown
+Ready for Testing:
+- [ ] E2E testing with real Last.fm accounts
+- [ ] Manual verification of all flows
+- [ ] Mobile responsiveness testing
 
 ---
 
 ## What's Next
 
-**Immediate Next Task:** Sprint 3-4 Phase 4 - API Routes
+**Immediate Next Sprint:** Sprint 5-6 - Frontend Development
 
-1. Implement OAuth routes in `src/clj/lasso/routes.clj`
-2. Wire up to existing OAuth client from Phase 1-3
-3. Add route tests
-4. Test full OAuth flow end-to-end
-
-**After That:** Phase 5-6 - Polling Engine
+**Goals:**
+- Build ClojureScript/Reagent UI
+- Implement Re-frame state management
+- Create session control components (start/pause/resume/stop)
+- Build real-time activity feed
+- Responsive design with Tailwind CSS
+- Connect frontend to working backend API
 
 **See:** `NEXT.md` for detailed next steps
 
@@ -121,24 +132,24 @@ test/clj/lasso/               ✅ Full test coverage
 
 ## Key Metrics
 
-- **Test Coverage:** 44 tests, 205 assertions, 100% passing
-- **CI Duration:** ~2min 15s average (tracked since 2026-02-12)
+- **Test Coverage:** 75 tests, 451 assertions, 100% passing
+- **CI Duration:** ~2min 30s average
 - **Code Quality:** All linting passes, no warnings
 - **Docker Build:** Working, ~150MB image
+- **Backend Status:** ✅ Fully functional end-to-end
 
 ---
 
 ## Branch Status
 
 ```
-main (v0.1.0)
+main (v0.2.0)
   └─ Sprint 2 scaffolding
-  └─ Automated release workflow
+  └─ Sprint 3-4 complete backend
+  └─ All tests passing
 
-develop (ahead by 2 commits)
-  └─ Gitflow setup + documentation
-  └─ CI duration tracking + wait script
-  └─ Sprint 3-4 Phase 1-3 (merged to develop)
+develop (synced with main)
+  └─ Same as main (v0.2.0)
 ```
 
 **Workflow:**
@@ -151,10 +162,13 @@ develop (ahead by 2 commits)
 
 1. **Gitflow Model:** Using `main` for releases, `develop` for integration
 2. **In-Memory Sessions:** Using atoms for MVP (will migrate to Redis later)
-3. **Polling Interval:** 15-30 seconds to respect Last.fm rate limits
-4. **Rate Limiting:** Client-side with exponential backoff
+3. **Polling Interval:** 20 seconds (respects Last.fm rate limits)
+4. **Rate Limiting:** Client-side with 200ms minimum interval
 5. **Security:** OAuth-only (no passwords), encrypted session keys
 6. **CI Strategy:** Single workflow, runs on both `main` and `develop` PRs
+7. **Handler Pattern:** Pedestal handlers take `[request]` and return response map directly
+8. **Body Parsing:** Manual InputStream parsing with fallbacks for string/map
+9. **HTTP Methods:** GET for unsigned (reads), POST for signed (writes)
 
 See `MEMORY.md` for more context on decisions and gotchas.
 
@@ -173,19 +187,20 @@ See `MEMORY.md` for more context on decisions and gotchas.
 ## Quick Commands
 
 ```bash
-# Development
-clj -M:dev:repl              # Start backend REPL
-npx shadow-cljs watch app    # Start frontend hot reload
-npm run watch:css            # Watch CSS changes
+# Development (ONE COMMAND!)
+bb dev                       # Start everything (backend + frontend + hot reload)
+# or: clj -M:dev:repl then (start)
 
-# Testing
-clj -M:test                  # Run all tests
-./scripts/wait-for-ci.sh 7   # Wait for PR CI
+# Other useful tasks
+bb test                      # Run all tests (82 tests)
+bb build                     # Build production artifacts
+bb clean                     # Clean build artifacts
+bb tasks                     # See all available tasks
 
 # Git (Gitflow)
 git checkout develop         # Work from develop
 git checkout -b feature/X    # Create feature branch
-gh pr create --base develop  # PR to develop (NOT main!)
+bb pr                        # Create PR to develop
 ```
 
 ---

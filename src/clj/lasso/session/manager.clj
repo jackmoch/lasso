@@ -47,7 +47,8 @@
                               :state :active
                               :started-at now
                               :scrobble-count 0
-                              :scrobble-cache #{}}
+                              :scrobble-cache #{}
+                              :recent-scrobbles []}
             updated (store/update-session
                      session-id
                      (fn [session]
@@ -145,7 +146,7 @@
                   {:state (:state following)
                    :target_username (:target-username following)
                    :scrobble_count (or (:scrobble-count following) 0)
-                   :recent_scrobbles [] ; TODO: Implement when polling is added
+                   :recent_scrobbles (or (:recent-scrobbles following) [])
                    :started_at (:started-at following)
                    :last_poll (:last-poll following)}
                   {:state :not-started

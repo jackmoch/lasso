@@ -3,24 +3,18 @@
   (:require [lasso.lastfm.oauth :as oauth]
             [lasso.auth.session :as auth-session]
             [lasso.util.http :as http]
+            [lasso.config :as config]
             [taoensso.timbre :as log]))
 
 (defn auth-init-handler
   "POST /api/auth/init
    Initiates the Last.fm OAuth flow by generating an auth URL.
+   Uses WEB authentication flow: Last.fm generates the token and passes it to callback.
    Returns: {:auth_url 'https://last.fm/...'}"
   [_request]
   (try
-    (let [token-result (oauth/get-token)]
-      (if (:token token-result)
-        (let [auth-url (oauth/generate-auth-url (:token token-result))]
-          (http/json-response {:auth_url auth-url}))
-        (do
-          (log/error "Failed to get OAuth token" token-result)
-          (http/error-response "Failed to initiate authentication"
-                               :status 500
-                               :error-code "OAUTH_TOKEN_FAILED"
-                               :details (:error token-result)))))
+    (let [auth-url (oauth/generate-auth-url)]
+      (http/json-response {:auth_url auth-url}))
     (catch Exception e
       (log/error e "Error in auth-init-handler")
       (http/error-response "Authentication initialization failed"
@@ -45,8 +39,17 @@
                   session-key (:key session-data)
                   {:keys [session-id]} (auth-session/create-session username session-key)]
               (log/info "User authenticated successfully" {:username username})
-              (http/json-response {:username username}
-                                 :cookies {"session-id" session-id}))
+              ;; Redirect to frontend root instead of returning JSON
+              (let [is-production? (= :production (:environment config/config))]
+                {:status 302
+                 :headers {"Location" "/"
+                           "Set-Cookie" (http/cookie-string "session-id" session-id
+                                                           :max-age (* 60 60 24 7)
+                                                           :path "/"
+                                                           :http-only true
+                                                           :secure is-production?  ; false in dev, true in prod
+                                                           :same-site "Lax")}
+                 :body ""}))
             (do
               (log/error "Failed to get session key" session-result)
               (http/error-response "Authentication failed"
