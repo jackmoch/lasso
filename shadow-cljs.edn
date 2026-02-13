@@ -23,4 +23,4 @@
   {:target :node-test
    :output-to "target/test.js"
    :autorun true
-   :ns-regexp "-test$"}}}}
+   :runner-ns lasso.test-runner}}}}
