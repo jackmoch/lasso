@@ -38,27 +38,20 @@
 
 ;; Tests for auth-init-handler
 (deftest auth-init-handler-test
-  (testing "successful OAuth initialization"
-    (with-redefs [oauth/get-token (fn [] {:token "test-token-123"})]
-      (let [request {}
-            response (handlers/auth-init-handler request)
-            body (parse-json-body response)]
-        (is (= 200 (:status response)))
-        (is (= "application/json" (get-in response [:headers "Content-Type"])))
-        (is (string? (:auth_url body)))
-        (is (.contains (:auth_url body) "test-token-123")))))
-
-  (testing "OAuth token request fails"
-    (with-redefs [oauth/get-token (fn [] {:error "API_ERROR"})]
-      (let [request {}
-            response (handlers/auth-init-handler request)
-            body (parse-json-body response)]
-        (is (= 500 (:status response)))
-        (is (= "Failed to initiate authentication" (:error body)))
-        (is (= "OAUTH_TOKEN_FAILED" (:error-code body))))))
+  (testing "successful OAuth initialization (WEB flow)"
+    (let [request {}
+          response (handlers/auth-init-handler request)
+          body (parse-json-body response)]
+      (is (= 200 (:status response)))
+      (is (= "application/json" (get-in response [:headers "Content-Type"])))
+      (is (string? (:auth_url body)))
+      ;; Web flow: URL should NOT contain a token (Last.fm generates it)
+      (is (.contains (:auth_url body) "api_key="))
+      (is (.contains (:auth_url body) "cb="))
+      (is (not (.contains (:auth_url body) "token=")))))
 
   (testing "handles exceptions gracefully"
-    (with-redefs [oauth/get-token (fn [] (throw (Exception. "Network error")))]
+    (with-redefs [oauth/generate-auth-url (fn [] (throw (Exception. "Network error")))]
       (let [request {}
             response (handlers/auth-init-handler request)
             body (parse-json-body response)]
