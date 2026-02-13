@@ -1,19 +1,19 @@
 # Project Status
 
-**Last Updated:** 2026-02-12
-**Current Sprint:** Sprint 5-6 (Frontend Development - In Progress)
+**Last Updated:** 2026-02-13
+**Current Sprint:** Sprint 7 (Integration & Testing - Not Started)
 **Project Phase:** Alpha Development (Pre-Launch)
 
 ---
 
 ## Quick Status
 
-- **Version:** v0.2.0 (released 2026-02-12)
-- **Main Branch:** Production-ready v0.2.0, backend fully functional
-- **Develop Branch:** Synced with main at v0.2.0
-- **Active Work:** `feature/sprint-5-6-frontend-wip` - Frontend complete, bug fixes applied
+- **Version:** v0.3.0 (released 2026-02-13)
+- **Main Branch:** Production-ready v0.3.0, full-stack application complete
+- **Develop Branch:** Synced with main at v0.3.0
+- **Active Work:** None (ready to begin Sprint 7)
 - **Blockers:** None
-- **Next Milestone:** v0.3.0 (Sprint 5-6: Complete + E2E testing)
+- **Next Milestone:** v0.4.0 (Sprint 7: Integration testing & polish)
 
 ---
 
@@ -88,43 +88,72 @@ test/clj/lasso/                   ✅ Full test coverage
     └── manual_testing_issues_test.clj  ✅ E2E integration tests
 ```
 
+### Sprint 5-6: Frontend Development ✅ (v0.3.0)
+
+**Implementation:**
+- [x] Complete Re-frame architecture (db, events, subs)
+- [x] Full API client implementation
+- [x] Authentication UI (login/logout with Last.fm OAuth)
+- [x] Session controls (start/pause/resume/stop)
+- [x] Activity feed with real-time polling
+- [x] Error handling and loading states
+- [x] Tailwind CSS styling and responsive design
+- [x] Hot module reload with shadow-cljs
+- [x] Development environment with `bb dev` (parallel processes)
+
+**Bug Fixes (E2E Testing):**
+- [x] Activity feed now displays scrobbles correctly
+- [x] Pause/Resume buttons update without refresh (Reagent Form-2)
+- [x] Page refresh preserves polling state and scrobbles
+- [x] OAuth web flow callback redirect working
+- [x] Timestamp filtering (no 5min lookback, session-start only)
+- [x] Re-frame dispatch errors fixed
+
+**Files Implemented:**
+```
+src/cljs/lasso/
+├── core.cljs                          ✅ App init + hot reload hooks
+├── db.cljs                            ✅ App state schema
+├── events.cljs                        ✅ Re-frame events
+├── subs.cljs                          ✅ Re-frame subscriptions
+├── api.cljs                           ✅ Backend API client
+├── views.cljs                         ✅ Main views
+└── components/
+    ├── auth.cljs                      ✅ Auth UI
+    ├── session_controls.cljs          ✅ Session controls
+    ├── activity_feed.cljs             ✅ Activity feed
+    └── error.cljs                     ✅ Error display
+
+dev/
+├── user.clj                           ✅ REPL utilities
+├── logging.clj                        ✅ Dev logging config
+└── logback.xml                        ✅ Logback config
+
+docs/development/
+├── DEVELOPMENT.md                     ✅ Dev quickstart
+├── HOT_RELOAD_AND_LOGGING.md         ✅ Hot reload guide
+└── HOT_RELOAD_TEST.md                 ✅ Testing guide
+```
+
 ---
 
 ## What's In Progress
 
-**Sprint 5-6: Frontend Development (95% Complete)**
-
-Branch: `feature/sprint-5-6-frontend-wip`
-
-Completed:
-- ✅ Complete Re-frame architecture (db, events, subs)
-- ✅ Full API client implementation
-- ✅ Authentication UI (login/logout)
-- ✅ Session controls (start/pause/resume/stop)
-- ✅ Activity feed with real-time polling
-- ✅ Error handling and loading states
-- ✅ Tailwind CSS styling
-- ✅ **BUG FIX:** OAuth web flow (callback redirect working)
-- ✅ **BUG FIX:** Timestamp filtering (5min lookback, no old scrobbles)
-
-Ready for Testing:
-- [ ] E2E testing with real Last.fm accounts
-- [ ] Manual verification of all flows
-- [ ] Mobile responsiveness testing
+**Nothing currently in progress** - Ready to begin Sprint 7
 
 ---
 
 ## What's Next
 
-**Immediate Next Sprint:** Sprint 5-6 - Frontend Development
+**Immediate Next Sprint:** Sprint 7 - Integration & Testing
 
 **Goals:**
-- Build ClojureScript/Reagent UI
-- Implement Re-frame state management
-- Create session control components (start/pause/resume/stop)
-- Build real-time activity feed
-- Responsive design with Tailwind CSS
-- Connect frontend to working backend API
+- Comprehensive integration testing
+- Performance profiling and optimization
+- Mobile responsiveness verification
+- Error handling improvements
+- Documentation polish
+- Deployment preparation
 
 **See:** `NEXT.md` for detailed next steps
 
@@ -137,19 +166,23 @@ Ready for Testing:
 - **Code Quality:** All linting passes, no warnings
 - **Docker Build:** Working, ~150MB image
 - **Backend Status:** ✅ Fully functional end-to-end
+- **Frontend Status:** ✅ Fully functional end-to-end
+- **Application Status:** ✅ Complete full-stack application working
 
 ---
 
 ## Branch Status
 
 ```
-main (v0.2.0)
+main (v0.3.0)
   └─ Sprint 2 scaffolding
   └─ Sprint 3-4 complete backend
+  └─ Sprint 5-6 complete frontend
+  └─ Full-stack application functional
   └─ All tests passing
 
 develop (synced with main)
-  └─ Same as main (v0.2.0)
+  └─ Same as main (v0.3.0)
 ```
 
 **Workflow:**
