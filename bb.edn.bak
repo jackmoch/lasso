@@ -15,10 +15,7 @@
   ;; Development tasks
   dev
   {:doc "Start full development environment (backend + frontend + auto-reload)"
-   :task (do
-           (println "\n⏳ Initializing Lasso development environment...")
-           (println "   Loading dependencies and starting REPL...\n")
-           (shell "clj -M:dev -e \"(do (require (quote user)) (user/start) (clojure.main/repl))\""))}
+   :task (shell "clj -M:dev -e \"(do (require 'user) (user/start) (println \\\"\\nREPL ready. Commands: (stop), (restart), (reset), (cljs-repl)\\\") (clojure.main/repl))\")")}
 
   repl
   {:doc "Start Clojure REPL with shadow-cljs integration"

@@ -40,22 +40,26 @@
                  [:check-auth-success]
                  [:check-auth-failure])}))
 
-(rf/reg-event-db
+(rf/reg-event-fx
  :check-auth-success
- (fn [db [_ response]]
+ (fn [{:keys [db]} [_ response]]
    (let [authenticated? (:authenticated response)
          username (:username response)
-         session (:session response)]
-     (cond-> db
-       true (assoc-in [:auth :checking?] false)
-       authenticated? (assoc-in [:auth :authenticated?] true)
-       authenticated? (assoc-in [:auth :username] username)
-       (and authenticated? session)
-       (-> (assoc-in [:session :state] (keyword (:state session)))
-           (assoc-in [:session :target-username] (:target_username session))
-           (assoc-in [:session :scrobble-count] (:scrobble_count session))
-           (assoc-in [:session :started-at] (:started_at session))
-           (assoc-in [:session :last-poll] (:last_poll session)))))))
+         session (:session response)
+         session-active? (= "active" (:state session))]
+     (cond-> {:db (cond-> db
+                    true (assoc-in [:auth :checking?] false)
+                    authenticated? (assoc-in [:auth :authenticated?] true)
+                    authenticated? (assoc-in [:auth :username] username)
+                    (and authenticated? session)
+                    (-> (assoc-in [:session :state] (keyword (:state session)))
+                        (assoc-in [:session :target-username] (:target_username session))
+                        (assoc-in [:session :scrobble-count] (:scrobble_count session))
+                        (assoc-in [:session :recent-scrobbles] (:recent_scrobbles session))
+                        (assoc-in [:session :started-at] (:started_at session))
+                        (assoc-in [:session :last-poll] (:last_poll session))))}
+       ;; If session is active, restart polling
+       session-active? (assoc :dispatch [:session/start-polling])))))
 
 (rf/reg-event-fx
  :check-auth-failure

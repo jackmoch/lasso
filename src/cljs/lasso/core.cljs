@@ -15,18 +15,28 @@
 (defn mount-root
   "Mount the root component to the DOM."
   []
-  (js/console.log "🔧 mount-root called")
   (rf/clear-subscription-cache!)
-  (rdom/render root [views/main-panel])
-  (js/console.log "✅ Root mounted"))
+  (rdom/render root [views/main-panel]))
 
 (defn ^:export init
   "Initialize the application."
   []
-  (js/console.log "🚀 APP INITIALIZING...")
+  (js/console.log "🚀 Lasso initializing...")
   (rf/dispatch-sync [:initialize-db])
-  (js/console.log "✅ DB initialized")
   (rf/dispatch [:check-auth])
-  (js/console.log "✅ Auth check dispatched")
   (mount-root)
-  (js/console.log "✅ APP INITIALIZED"))
+  (js/console.log "✅ Lasso ready"))
+
+;; -- Hot Reload Hooks --
+
+(defn before-reload
+  "Called before hot reload. Clean up state."
+  []
+  (js/console.log "%c🔄 Hot reload starting...", "color: orange; font-weight: bold"))
+
+(defn after-reload
+  "Called after hot reload. Re-mount UI."
+  []
+  (js/console.log "%c🔄 Reloading UI...", "color: blue; font-weight: bold")
+  (mount-root)
+  (js/console.log "%c✅ Hot reload complete! Changes applied.", "color: green; font-weight: bold"))
