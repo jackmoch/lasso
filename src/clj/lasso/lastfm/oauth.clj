@@ -17,8 +17,9 @@
    Includes callback URL so Last.fm knows where to redirect after authorization."
   []
   (let [api-key (get-in config/config [:lastfm :api-key])
+        auth-url (get-in config/config [:lastfm :auth-url])
         callback-url (get-in config/config [:lastfm :callback-url])]
-    (str "https://www.last.fm/api/auth/?api_key=" api-key
+    (str auth-url "/api/auth/?api_key=" api-key
          "&cb=" (java.net.URLEncoder/encode callback-url "UTF-8"))))
 
 (defn get-session-key

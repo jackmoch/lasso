@@ -1,5 +1,5 @@
 const { test, expect } = require('@playwright/test');
-const { waitForAppReady } = require('./helpers');
+const { waitForAppReady, setupAuthenticatedContext } = require('./helpers');
 
 test.describe('Error Handling', () => {
   test.beforeEach(async ({ page }) => {
@@ -18,9 +18,9 @@ test.describe('Error Handling', () => {
     await context.setOffline(false);
   });
 
-  test('should display and dismiss error messages', async ({ page, context }) => {
-    // Skip if not authenticated - would need OAuth mock
-    test.skip(!process.env.TEST_WITH_AUTH, 'Requires authentication');
+  test('should display and dismiss error messages', async ({ page }) => {
+    // Authenticate first
+    await setupAuthenticatedContext(page);
 
     // Trigger an error (e.g., invalid username)
     const usernameInput = page.getByPlaceholder(/e\.g\., johndoe/i);
