@@ -19,13 +19,16 @@
           (is (= "test-token-123" (:token result))))))))
 
 (deftest generate-auth-url-test
-  (testing "Generate auth URL with token"
-    (with-redefs [lasso.config/config {:lastfm {:api-key "test-api-key"}}]
-      (let [url (oauth/generate-auth-url "my-token")]
+  (testing "Generate auth URL with callback (web flow)"
+    (with-redefs [lasso.config/config {:lastfm {:api-key "test-api-key"
+                                                 :callback-url "http://localhost:8080/callback"}}]
+      (let [url (oauth/generate-auth-url)]
         (is (string? url))
         (is (.startsWith url "https://www.last.fm/api/auth/"))
         (is (.contains url "api_key=test-api-key"))
-        (is (.contains url "token=my-token"))))))
+        (is (.contains url "cb=http"))
+        ;; Web flow should NOT include token parameter
+        (is (not (.contains url "token=")))))))
 
 (deftest get-session-key-test
   (testing "Get session key calls correct API method"

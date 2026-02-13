@@ -241,17 +241,18 @@
 ;;; ============================================================================
 
 (deftest complete-oauth-flow-test
-  (testing "Complete OAuth flow from init to callback"
-    (with-redefs [oauth/get-token (fn [] {:token "test-token-123"})
-                  oauth/get-session-key (fn [token]
+  (testing "Complete OAuth flow from init to callback (Web flow)"
+    (with-redefs [oauth/get-session-key (fn [token]
                                           (is (= "test-token-123" token))
                                           {:session {:name "testuser" :key "session-key-abc"}})]
-      ;; Step 1: Initialize OAuth
+      ;; Step 1: Initialize OAuth (Web flow - no token call needed)
       (let [init-response (auth-handlers/auth-init-handler {})
             init-body (parse-json-body init-response)]
         (is (= 200 (:status init-response)))
         (is (string? (:auth_url init-body)))
-        (is (.contains (:auth_url init-body) "test-token-123"))
+        ;; Web flow: URL should have api_key and cb, but NOT token
+        (is (.contains (:auth_url init-body) "api_key="))
+        (is (.contains (:auth_url init-body) "cb="))
 
         ;; Step 2: Callback after user authorization
         (let [callback-response (auth-handlers/auth-callback-handler
