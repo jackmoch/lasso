@@ -91,6 +91,23 @@
   {:doc "Run specific test namespace (usage: bb test:focus <namespace>)"
    :task (shell (str "clj -M:test --focus " (first *command-line-args*)))}
 
+  test:frontend
+  {:doc "Run frontend ClojureScript tests"
+   :task (shell "npx shadow-cljs compile test && node target/test.js")}
+
+  test:frontend:watch
+  {:doc "Run frontend tests in watch mode"
+   :task (shell "npx shadow-cljs watch test")}
+
+  test:all
+  {:doc "Run all tests (backend + frontend)"
+   :task (do
+           (println "🧪 Running backend tests...")
+           (shell "clj -M:test")
+           (println "\n🧪 Running frontend tests...")
+           (shell "npx shadow-cljs compile test && node target/test.js")
+           (println "\n✅ All tests complete!"))}
+
   ;; Build tasks
   build
   {:doc "Build all production artifacts (frontend + CSS + uberjar)"
