@@ -60,38 +60,58 @@
 
 ;; Test for identify-new-tracks
 (deftest identify-new-tracks-test
-  (testing "identifies new tracks not in cache"
-    (let [tracks [{:artist {:#text "Artist 1"}
+  (testing "identifies new tracks not in cache and after session start"
+    (let [session-start (System/currentTimeMillis)
+          tracks [{:artist {:#text "Artist 1"}
                   :name "Track 1"
-                  :date {:uts "100"}}
+                  :date {:uts (str (quot session-start 1000))}}
                  {:artist {:#text "Artist 2"}
                   :name "Track 2"
-                  :date {:uts "200"}}]
-          cache #{"Artist 1|Track 1|100"}
-          new-tracks (engine/identify-new-tracks tracks cache)]
+                  :date {:uts (str (+ (quot session-start 1000) 10))}}]
+          cache #{"Artist 1|Track 1|" (str (quot session-start 1000))}
+          new-tracks (engine/identify-new-tracks tracks cache session-start)]
       (is (= 1 (count new-tracks)))
       (is (= "Artist 2" (:artist (first new-tracks))))))
 
   (testing "returns empty when all tracks are cached"
-    (let [tracks [{:artist {:#text "Artist 1"}
+    (let [session-start (System/currentTimeMillis)
+          tracks [{:artist {:#text "Artist 1"}
                   :name "Track 1"
-                  :date {:uts "100"}}]
-          cache #{"Artist 1|Track 1|100"}
-          new-tracks (engine/identify-new-tracks tracks cache)]
+                  :date {:uts (str (quot session-start 1000))}}]
+          cache #{"Artist 1|Track 1|" (str (quot session-start 1000))}
+          new-tracks (engine/identify-new-tracks tracks cache session-start)]
       (is (empty? new-tracks))))
 
+  (testing "filters out tracks before session start (minus 5min buffer)"
+    (let [session-start (System/currentTimeMillis)
+          session-start-sec (quot session-start 1000)
+          ;; Track from 10 minutes before session start (should be filtered out)
+          old-track {:artist {:#text "Old Artist"}
+                    :name "Old Track"
+                    :date {:uts (str (- session-start-sec (* 10 60)))}}
+          ;; Track from 2 minutes before session start (within 5min buffer, should be included)
+          recent-track {:artist {:#text "Recent Artist"}
+                       :name "Recent Track"
+                       :date {:uts (str (- session-start-sec (* 2 60)))}}
+          tracks [old-track recent-track]
+          cache #{}
+          new-tracks (engine/identify-new-tracks tracks cache session-start)]
+      (is (= 1 (count new-tracks)))
+      (is (= "Recent Artist" (:artist (first new-tracks))))))
+
   (testing "sorts tracks by timestamp"
-    (let [tracks [{:artist {:#text "Artist 1"}
+    (let [session-start (System/currentTimeMillis)
+          session-start-sec (quot session-start 1000)
+          tracks [{:artist {:#text "Artist 1"}
                   :name "Track 1"
-                  :date {:uts "200"}}
+                  :date {:uts (str (+ session-start-sec 100))}}
                  {:artist {:#text "Artist 2"}
                   :name "Track 2"
-                  :date {:uts "100"}}]
+                  :date {:uts (str session-start-sec)}}]
           cache #{}
-          new-tracks (engine/identify-new-tracks tracks cache)]
+          new-tracks (engine/identify-new-tracks tracks cache session-start)]
       (is (= 2 (count new-tracks)))
-      (is (= 100 (:timestamp (first new-tracks))))
-      (is (= 200 (:timestamp (second new-tracks)))))))
+      (is (<= (:timestamp (first new-tracks)) (:timestamp (second new-tracks)))))))
 
 ;; Test for update-session-after-poll
 (deftest update-session-after-poll-test
@@ -133,13 +153,15 @@
   (testing "returns 0 scrobbled when no new tracks"
     (with-redefs [client/api-request (fn [_] {:recenttracks {:track []}})]
       (let [{:keys [session-id]} (auth-session/create-session "testuser" "session-key")
+            session-start (System/currentTimeMillis)
             _ (store/update-session
                session-id
                (fn [session]
                  (assoc session :following-session {:state :active
                                                     :target-username "targetuser"
                                                     :scrobble-count 0
-                                                    :scrobble-cache #{}})))
+                                                    :scrobble-cache #{}
+                                                    :started-at session-start})))
             result (engine/poll-and-scrobble session-id)]
         (is (= 0 (:scrobbled result))))))
 
@@ -152,13 +174,16 @@
                                         {:scrobbles {(keyword "@attr") {:accepted "1" :ignored "0"}}}))
                  scrobble/scrobble-track (fn [_ _] {:success true :accepted 1 :ignored 0})]
       (let [{:keys [session-id]} (auth-session/create-session "testuser" "session-key")
+            ;; Session started just before track timestamp (1234567890 seconds = ~2009)
+            session-start (* 1234567000 1000)
             _ (store/update-session
                session-id
                (fn [session]
                  (assoc session :following-session {:state :active
                                                     :target-username "targetuser"
                                                     :scrobble-count 0
-                                                    :scrobble-cache #{}})))
+                                                    :scrobble-cache #{}
+                                                    :started-at session-start})))
             result (engine/poll-and-scrobble session-id)]
         (is (= 1 (:scrobbled result)))
         (is (= #{"The Beatles|Hey Jude|1234567890"} (:new-cache result))))))
@@ -186,13 +211,16 @@
                                             :else
                                             {:success true :accepted 1 :ignored 0}))]
       (let [{:keys [session-id]} (auth-session/create-session "testuser" "session-key")
+            ;; Session started before all tracks (timestamp 0 = 1970)
+            session-start 0
             _ (store/update-session
                session-id
                (fn [session]
                  (assoc session :following-session {:state :active
                                                     :target-username "targetuser"
                                                     :scrobble-count 0
-                                                    :scrobble-cache #{}})))
+                                                    :scrobble-cache #{}
+                                                    :started-at session-start})))
             result (engine/poll-and-scrobble session-id)]
         ;; Only 1 successful scrobble (Track 2)
         (is (= 1 (:scrobbled result)))
@@ -211,13 +239,16 @@
                                         {:scrobbles {(keyword "@attr") {:accepted "1" :ignored "0"}}}))
                  scrobble/scrobble-track (fn [_ _] {:success false :error "API error"})]
       (let [{:keys [session-id]} (auth-session/create-session "testuser" "session-key")
+            ;; Session started before track
+            session-start 0
             _ (store/update-session
                session-id
                (fn [session]
                  (assoc session :following-session {:state :active
                                                     :target-username "targetuser"
                                                     :scrobble-count 0
-                                                    :scrobble-cache #{}})))
+                                                    :scrobble-cache #{}
+                                                    :started-at session-start})))
             ;; First poll - scrobble fails
             result1 (engine/poll-and-scrobble session-id)]
         ;; No successful scrobbles

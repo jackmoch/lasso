@@ -59,10 +59,20 @@
 (defn identify-new-tracks
   "Identify tracks that haven't been scrobbled yet.
    Compares against scrobble-cache to find new tracks.
+   Filters by session-start-time to only include tracks after session started
+   (with 5-minute lookback buffer to catch recent activity).
    Returns sequence of new tracks."
-  [tracks scrobble-cache]
-  (let [parsed-tracks (keep parse-lastfm-track tracks)]
+  [tracks scrobble-cache session-start-time]
+  (let [parsed-tracks (keep parse-lastfm-track tracks)
+        ;; 5-minute lookback buffer (in seconds)
+        lookback-buffer (* 5 60)
+        ;; Convert session start from milliseconds to seconds
+        cutoff-time (- (quot session-start-time 1000) lookback-buffer)]
     (->> parsed-tracks
+         ;; Filter by timestamp - only tracks after cutoff
+         (filter (fn [track]
+                   (>= (:timestamp track) cutoff-time)))
+         ;; Filter by cache - only tracks not already scrobbled
          (filter (fn [track]
                    (not (contains? scrobble-cache (track->cache-key track)))))
          (sort-by :timestamp))))
@@ -80,6 +90,7 @@
 
         (let [target-username (:target-username following)
               scrobble-cache (:scrobble-cache following)
+              session-start-time (:started-at following)
               session-key (:session-key session)
               decrypted-key (auth-session/decrypt-session-key session-key)
 
@@ -90,7 +101,7 @@
             {:error (:error fetch-result)}
 
             (let [tracks (:tracks fetch-result)
-                  new-tracks (identify-new-tracks tracks scrobble-cache)]
+                  new-tracks (identify-new-tracks tracks scrobble-cache session-start-time)]
 
               (if (empty? new-tracks)
                 {:scrobbled 0
