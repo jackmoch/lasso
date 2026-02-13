@@ -1,0 +1,78 @@
+# Google Cloud Build Configuration
+# Automated build and deployment to Cloud Run
+#
+# Trigger this build with:
+#   gcloud builds submit --config cloudbuild.yaml
+#
+# Or set up automated triggers on git push
+
+steps:
+  # Step 1: Build Docker image
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'build-image'
+    args:
+      - 'build'
+      - '-t'
+      - 'gcr.io/$PROJECT_ID/lasso:$COMMIT_SHA'
+      - '-t'
+      - 'gcr.io/$PROJECT_ID/lasso:latest'
+      - '.'
+    timeout: 600s
+
+  # Step 2: Push Docker image to Container Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'push-image'
+    args:
+      - 'push'
+      - 'gcr.io/$PROJECT_ID/lasso:$COMMIT_SHA'
+
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'push-latest'
+    args:
+      - 'push'
+      - 'gcr.io/$PROJECT_ID/lasso:latest'
+
+  # Step 3: Deploy to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: 'deploy-cloud-run'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - 'lasso'
+      - '--image'
+      - 'gcr.io/$PROJECT_ID/lasso:$COMMIT_SHA'
+      - '--region'
+      - '${_REGION}'
+      - '--platform'
+      - 'managed'
+      - '--allow-unauthenticated'
+      - '--memory'
+      - '512Mi'
+      - '--cpu'
+      - '1'
+      - '--max-instances'
+      - '10'
+      - '--min-instances'
+      - '0'
+      - '--set-env-vars'
+      - 'ENVIRONMENT=production,LASTFM_API_BASE_URL=https://ws.audioscrobbler.com,LASTFM_AUTH_URL=https://www.last.fm'
+      # Note: Sensitive values should be set via Secret Manager
+      # Use --set-secrets for LASTFM_API_SECRET and SESSION_SECRET
+
+# Substitutions (can be overridden)
+substitutions:
+  _REGION: us-central1
+
+# Store build logs
+options:
+  logging: CLOUD_LOGGING_ONLY
+  machineType: 'N1_HIGHCPU_8'
+
+# Build timeout
+timeout: 1200s
+
+# Store images in Container Registry
+images:
+  - 'gcr.io/$PROJECT_ID/lasso:$COMMIT_SHA'
+  - 'gcr.io/$PROJECT_ID/lasso:latest'

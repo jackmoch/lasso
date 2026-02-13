@@ -25,6 +25,7 @@ resources/public/css/*.map
 # Environment variables (DO NOT COMMIT SECRETS)
 .env
 .env.local
+.env.production
 .env.*.local
 
 # OS files

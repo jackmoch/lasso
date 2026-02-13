@@ -14,10 +14,29 @@
    :output-dir "resources/public/js"
    :asset-path "/js"
    :modules {:main {:init-fn lasso.core/init}}
+
+   ;; Development configuration
    :devtools {:before-load lasso.core/before-reload
               :after-load lasso.core/after-reload
               :http-port 8280
-              :http-root "resources/public"}}
+              :http-root "resources/public"}
+
+   ;; Production optimizations
+   :compiler-options {:optimizations :advanced
+                      :infer-externs :auto
+                      :source-map true
+                      :output-feature-set :es6}
+
+   ;; Release-specific settings (used with shadow-cljs release)
+   :release {:compiler-options {:optimizations :advanced
+                                :infer-externs :auto
+                                :pretty-print false
+                                :pseudo-names false
+                                :source-map false
+                                :elide-asserts true
+                                :output-feature-set :es6}
+             :build-options {:manifest-name "manifest.json"
+                            :cache-level :all}}}
 
   :test
   {:target :node-test
