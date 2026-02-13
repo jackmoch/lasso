@@ -24,6 +24,7 @@
    [:last-poll {:optional true} [:maybe :int]]
    [:scrobble-count {:optional true} [:int {:min 0}]]
    [:scrobble-cache {:optional true} [:set :string]]
+   [:recent-scrobbles {:optional true} [:vector Track]]
    [:paused-at {:optional true} [:maybe :int]]
    [:stopped-at {:optional true} [:maybe :int]]])
 

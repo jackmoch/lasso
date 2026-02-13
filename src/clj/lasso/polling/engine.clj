@@ -59,15 +59,12 @@
 (defn identify-new-tracks
   "Identify tracks that haven't been scrobbled yet.
    Compares against scrobble-cache to find new tracks.
-   Filters by session-start-time to only include tracks after session started
-   (with 5-minute lookback buffer to catch recent activity).
+   Filters by session-start-time to only include tracks after session started.
    Returns sequence of new tracks."
   [tracks scrobble-cache session-start-time]
   (let [parsed-tracks (keep parse-lastfm-track tracks)
-        ;; 5-minute lookback buffer (in seconds)
-        lookback-buffer (* 5 60)
-        ;; Convert session start from milliseconds to seconds
-        cutoff-time (- (quot session-start-time 1000) lookback-buffer)]
+        ;; Convert session start from milliseconds to seconds (no lookback buffer)
+        cutoff-time (quot session-start-time 1000)]
     (->> parsed-tracks
          ;; Filter by timestamp - only tracks after cutoff
          (filter (fn [track]
@@ -105,7 +102,8 @@
 
               (if (empty? new-tracks)
                 {:scrobbled 0
-                 :new-cache scrobble-cache}
+                 :new-cache scrobble-cache
+                 :new-tracks []}
 
                 (do
                   (log/info "Found" (count new-tracks) "new tracks to scrobble"
@@ -128,24 +126,33 @@
 
                     ;; Only cache successful scrobbles
                     (let [successful-keys (map (comp track->cache-key :track) successful-tracks)
+                          successful-track-data (map :track successful-tracks)
                           updated-cache (into scrobble-cache successful-keys)]
                       {:scrobbled (count successful-tracks)
-                       :new-cache updated-cache})))))))))
+                       :new-cache updated-cache
+                       :new-tracks successful-track-data})))))))))
     (catch Exception e
       (log/error e "Error in poll-and-scrobble" {:session-id session-id})
       {:error "poll-failed"})))
 
 (defn update-session-after-poll
   "Update session with polling results.
-   Increments scrobble count and updates cache."
-  [session-id scrobbled-count new-cache]
+   Increments scrobble count, updates cache, and stores recent scrobbles.
+   Keeps last 20 scrobbles for display in activity feed."
+  [session-id scrobbled-count new-cache new-tracks]
   (store/update-session
    session-id
    (fn [session]
-     (-> session
-         (update-in [:following-session :scrobble-count] + scrobbled-count)
-         (assoc-in [:following-session :scrobble-cache] new-cache)
-         (assoc-in [:following-session :last-poll] (System/currentTimeMillis))))))
+     (let [current-scrobbles (get-in session [:following-session :recent-scrobbles] [])
+           ;; Prepend new tracks (most recent first) and limit to 20
+           updated-scrobbles (->> (concat new-tracks current-scrobbles)
+                                  (take 20)
+                                  vec)]
+       (-> session
+           (update-in [:following-session :scrobble-count] + scrobbled-count)
+           (assoc-in [:following-session :scrobble-cache] new-cache)
+           (assoc-in [:following-session :recent-scrobbles] updated-scrobbles)
+           (assoc-in [:following-session :last-poll] (System/currentTimeMillis)))))))
 
 (defn execute-poll
   "Execute a single polling cycle for a session.
@@ -165,4 +172,5 @@
                                           :scrobbled (:scrobbled result)}))
         (update-session-after-poll session-id
                                   (:scrobbled result)
-                                  (:new-cache result))))))
+                                  (:new-cache result)
+                                  (:new-tracks result))))))
