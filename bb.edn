@@ -139,6 +139,14 @@
            (shell "npx playwright test")
            (println "\n✅ All tests complete!"))}
 
+  coverage
+  {:doc "Generate test coverage report for backend"
+   :task (do
+           (println "📊 Generating backend test coverage...")
+           (shell "clj -M:coverage")
+           (println "\n✅ Coverage report generated in target/coverage/")
+           (println "   Open target/coverage/index.html to view the report"))}
+
   ;; Build tasks
   build
   {:doc "Build all production artifacts (frontend + CSS + uberjar)"

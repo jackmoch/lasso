@@ -83,13 +83,35 @@ jobs:
       - name: Build CSS
         run: npm run build:css
 
-      - name: Run tests
-        id: test
+      - name: Run backend tests
+        id: backend-test
         run: |
-          echo "Running Clojure tests..."
-          clj -M:test || echo "No tests found (expected for Sprint 2)"
-          echo "✅ Test step completed"
-        continue-on-error: true  # Don't fail if no tests exist yet
+          echo "🧪 Running backend tests..."
+          clj -M:test
+
+      - name: Run frontend tests
+        id: frontend-test
+        run: |
+          echo "🧪 Running frontend tests..."
+          npx shadow-cljs compile test
+          node target/test.js
+
+      - name: Generate coverage report
+        id: coverage
+        run: |
+          echo "📊 Generating test coverage..."
+          clj -M:coverage
+        continue-on-error: true  # Don't fail build if coverage fails
+
+      - name: Upload coverage to Codecov
+        if: always()
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./target/coverage/codecov.json
+          flags: backend
+          fail_ci_if_error: false
+          token: ${{ secrets.CODECOV_TOKEN }}
+        continue-on-error: true
 
       - name: Build backend
         run: clojure -X:uberjar
@@ -104,6 +126,7 @@ jobs:
             resources/public/js/
             resources/public/css/tailwind.css
             lint-results.txt
+            target/coverage/
           retention-days: 7
 
       - name: Generate build summary
@@ -114,6 +137,31 @@ jobs:
           echo "**Commit:** \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
           echo "**Branch:** \`${{ github.ref_name }}\`" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Test results
+          echo "### 🧪 Test Results" >> $GITHUB_STEP_SUMMARY
+          BACKEND_STATUS="${{ steps.backend-test.outcome }}"
+          FRONTEND_STATUS="${{ steps.frontend-test.outcome }}"
+
+          if [ "$BACKEND_STATUS" == "success" ]; then
+            echo "- Backend tests: ✅ Passed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- Backend tests: ❌ Failed" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          if [ "$FRONTEND_STATUS" == "success" ]; then
+            echo "- Frontend tests: ✅ Passed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- Frontend tests: ❌ Failed" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Coverage results
+          if [ -f target/coverage/codecov.json ]; then
+            echo "### 📊 Test Coverage" >> $GITHUB_STEP_SUMMARY
+            echo "Coverage report generated. See artifacts for detailed report." >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+          fi
 
           # Linting results
           echo "### Linting Results" >> $GITHUB_STEP_SUMMARY
@@ -256,7 +304,7 @@ jobs:
               const durationSec = parseInt(duration);
               const minutes = Math.floor(durationSec / 60);
               const seconds = durationSec % 60;
-              durationText = `⏱️ **Duration:** ${minutes}m ${seconds}s (~2.5min typical)`;
+              durationText = `⏱️ **Duration:** ${minutes}m ${seconds}s`;
             }
 
             const body = `## CI Build Status: ${status}
@@ -267,10 +315,15 @@ jobs:
 
             ### Results
             - **Lint & Build:** ${lintStatus}
+            - **Backend Tests:** Included in build step
+            - **Frontend Tests:** Included in build step
             - **Docker Build:** ${dockerStatus}
 
+            ### Test Coverage
+            Coverage reports are generated and available in the workflow artifacts.
+
             ### Details
-            View the full [workflow run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) for detailed logs and artifacts.
+            View the full [workflow run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) for detailed logs, test results, and coverage reports.
 
             ${status.includes('❌') ? '⚠️ **Action Required:** Please review the failed checks and push fixes to this branch. CI will automatically re-run on push.' : '✨ **Ready for Review:** All checks passed! This PR is ready for human review.'}
             `;
