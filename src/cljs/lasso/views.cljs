@@ -27,13 +27,14 @@
 (defn main-panel
   "Main application panel component."
   []
-  (let [checking? @(rf/subscribe [:auth/checking?])]
-    (if checking?
-      [loading-spinner]
-      [:div.min-h-screen.bg-gray-50
-       [navbar]
-       [:div.max-w-4xl.mx-auto.px-4.pb-8
-        [error/error-display]
-        [auth/auth-component]
-        [session-controls/session-controls]
-        [activity-feed/activity-feed]]])))
+  (fn []
+    (let [checking? @(rf/subscribe [:auth/checking?])]
+      (if checking?
+        [loading-spinner]
+        [:div.min-h-screen.bg-gray-50
+         [navbar]
+         [:div.max-w-4xl.mx-auto.px-4.pb-8
+          [error/error-display]
+          [auth/auth-component]
+          [session-controls/session-controls]
+          [activity-feed/activity-feed]]]))))

@@ -39,22 +39,17 @@
             can-stop? @(rf/subscribe [:session/can-stop?])
             loading? @(rf/subscribe [:ui/session-control-loading?])]
         [:div.space-y-3
-         {:key (str "controls-" (cond can-pause? "pause"
-                                     can-resume? "resume"
-                                     :else "none"))}
          ;; Pause button
          (when can-pause?
            [:button.btn-secondary.w-full
-            {:key "pause-btn"
-             :on-click #(rf/dispatch [:session/pause])
+            {:on-click #(rf/dispatch [:session/pause])
              :disabled loading?}
             (if loading? "Pausing..." "Pause Session")])
 
          ;; Resume button
          (when can-resume?
            [:button.btn-primary.w-full
-            {:key "resume-btn"
-             :on-click #(rf/dispatch [:session/resume])
+            {:on-click #(rf/dispatch [:session/resume])
              :disabled loading?}
             (if loading? "Resuming..." "Resume Session")])
 
@@ -62,7 +57,6 @@
          (when can-stop?
            (if @show-confirm?
              [:div.bg-yellow-50.border.border-yellow-200.rounded-md.p-4.space-y-3
-              {:key "confirm-dialog"}
               [:p.text-sm.text-yellow-800.font-medium
                "Are you sure you want to stop this session?"]
               [:p.text-xs.text-yellow-700
@@ -79,20 +73,20 @@
                  :disabled loading?}
                 "Cancel"]]]
              [:button.px-4.py-2.w-full.bg-red-600.text-white.rounded-md.hover:bg-red-700.transition-colors
-              {:key "stop-btn"
-               :on-click #(reset! show-confirm? true)
+              {:on-click #(reset! show-confirm? true)
                :disabled loading?}
               "Stop Session"]))]))))
 
 (defn session-controls
   "Main session controls container."
   []
-  (let [authenticated? @(rf/subscribe [:auth/authenticated?])
-        can-start? @(rf/subscribe [:session/can-start?])]
-    (when authenticated?
-      [:div.bg-white.rounded-lg.shadow.p-6.mb-6
-       [:h2.text-xl.font-semibold.text-gray-900.mb-4
-        "Session Controls"]
-       (if can-start?
-         [target-username-form]
-         [control-buttons])])))
+  (fn []
+    (let [authenticated? @(rf/subscribe [:auth/authenticated?])
+          can-start? @(rf/subscribe [:session/can-start?])]
+      (when authenticated?
+        [:div.bg-white.rounded-lg.shadow.p-6.mb-6
+         [:h2.text-xl.font-semibold.text-gray-900.mb-4
+          "Session Controls"]
+         (if can-start?
+           [target-username-form]
+           [control-buttons])]))))
