@@ -1,34 +1,55 @@
 # Development Guide
 
-## Quick Start (Recommended)
+## Quick Start - Single Command! ⚡
 
-Use two terminals for best development experience:
-
-### Terminal 1: Frontend (shadow-cljs)
 ```bash
-npx shadow-cljs watch app
+bb dev
 ```
+
+**What happens:**
+- 🚀 Starts both frontend (shadow-cljs watch) and backend (Pedestal + REPL) in parallel
+- 📺 Shows output from both processes in one terminal
+- 🔥 Hot reload enabled automatically
+- 🛑 Ctrl+C stops everything cleanly
 
 **What you'll see:**
-- Initial compilation (~20s first time)
-- `[:app] Build completed.` message
-- Live reload messages when you save files
-- Compilation errors if any
-
-### Terminal 2: Backend + REPL
-```bash
-bb backend
 ```
+🚀 Starting Lasso development environment...
+   • Frontend: shadow-cljs watch (port 8280)
+   • Backend: Pedestal server (port 8080) + REPL
 
-Or for full REPL control:
-```bash
-clj -M:dev
-user=> (start-backend)
+⏳ Waiting for services to start...
+   Watch for:
+   - shadow-cljs: '[:app] Build completed'
+   - backend: '✅ Backend ready'
+
+[shadow-cljs output...]
+[:app] Compiling ...
+[:app] Build completed. (180 files, 179 compiled, 0 warnings, 18s)
+
+[backend output...]
+✅ Backend ready on http://localhost:8080
 ```
 
 **Access the app:**
 - Open http://localhost:8080
 - Open browser console (F12) to see hot reload messages
+
+---
+
+## Alternative: Two Terminal Mode
+
+If you prefer separate control:
+
+### Terminal 1: Frontend
+```bash
+npx shadow-cljs watch app
+```
+
+### Terminal 2: Backend
+```bash
+bb backend
+```
 
 ---
 

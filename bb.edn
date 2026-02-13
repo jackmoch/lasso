@@ -15,10 +15,34 @@
   ;; Development tasks
   dev
   {:doc "Start full development environment (backend + frontend + auto-reload)"
-   :task (do
-           (println "\n⏳ Initializing Lasso development environment...")
-           (println "   Loading dependencies and starting REPL...\n")
-           (shell "clj -M:dev -e \"(do (require (quote user)) (user/start) (clojure.main/repl))\""))}
+   :task (let [shadow-proc (p/process ["npx" "shadow-cljs" "watch" "app"]
+                                      {:inherit true
+                                       :shutdown p/destroy-tree})
+               backend-proc (p/process ["clj" "-M:dev" "-e"
+                                       "(do (require 'user) (user/start-backend) (println \"\\n✅ Backend ready on http://localhost:8080\\n\") (clojure.main/repl))"]
+                                      {:inherit true
+                                       :shutdown p/destroy-tree})]
+           (println "\n🚀 Starting Lasso development environment...")
+           (println "   • Frontend: shadow-cljs watch (port 8280)")
+           (println "   • Backend: Pedestal server (port 8080) + REPL\n")
+           (println "⏳ Waiting for services to start...")
+           (println "   Watch for:")
+           (println "   - shadow-cljs: '[:app] Build completed'")
+           (println "   - backend: '✅ Backend ready'\n")
+           (println "📝 Press Ctrl+C to stop all services\n")
+           ;; Add shutdown hook for clean exit
+           (.addShutdownHook (Runtime/getRuntime)
+                            (Thread. (fn []
+                                      (println "\n\n👋 Shutting down services...")
+                                      (p/destroy-tree shadow-proc)
+                                      (p/destroy-tree backend-proc)
+                                      (Thread/sleep 500)
+                                      (println "✅ All services stopped\n"))))
+           ;; Wait for either process to exit
+           (let [result (deref (future @shadow-proc) 100 :running)]
+             (when (not= result :running)
+               (println "\n⚠️  shadow-cljs exited unexpectedly"))
+             @backend-proc))}
 
   repl
   {:doc "Start Clojure REPL with shadow-cljs integration"
@@ -41,6 +65,10 @@
   frontend:check
   {:doc "Check frontend compilation (no output)"
    :task (shell "npx shadow-cljs check app")}
+
+  backend
+  {:doc "Start backend server only (use when running shadow-cljs separately)"
+   :task (shell "clj -M:dev -e \"(do (require 'user) (user/start-backend) (println \\\"\\n✅ Backend ready on http://localhost:8080\\nREPL available. Type (stop-backend) to stop.\\n\\\") (clojure.main/repl))\"")}
 
   ;; CSS tasks
   css
