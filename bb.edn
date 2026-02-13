@@ -91,6 +91,62 @@
   {:doc "Run specific test namespace (usage: bb test:focus <namespace>)"
    :task (shell (str "clj -M:test --focus " (first *command-line-args*)))}
 
+  test:frontend
+  {:doc "Run frontend ClojureScript tests"
+   :task (do
+           (shell "npx shadow-cljs compile test")
+           (shell "node target/test.js"))}
+
+  test:frontend:watch
+  {:doc "Run frontend tests in watch mode"
+   :task (shell "npx shadow-cljs watch test")}
+
+  test:all
+  {:doc "Run all tests (backend + frontend)"
+   :task (do
+           (println "🧪 Running backend tests...")
+           (shell "clj -M:test")
+           (println "\n🧪 Running frontend tests...")
+           (shell "npx shadow-cljs compile test")
+           (shell "node target/test.js")
+           (println "\n✅ All tests complete!"))}
+
+  test:e2e
+  {:doc "Run E2E tests with Playwright"
+   :task (shell "npx playwright test")}
+
+  test:e2e:ui
+  {:doc "Run E2E tests with Playwright UI"
+   :task (shell "npx playwright test --ui")}
+
+  test:e2e:headed
+  {:doc "Run E2E tests in headed mode (visible browser)"
+   :task (shell "npx playwright test --headed")}
+
+  test:e2e:debug
+  {:doc "Run E2E tests in debug mode"
+   :task (shell "npx playwright test --debug")}
+
+  test:complete
+  {:doc "Run all tests including E2E (requires app running)"
+   :task (do
+           (println "🧪 Running backend tests...")
+           (shell "clj -M:test")
+           (println "\n🧪 Running frontend tests...")
+           (shell "npx shadow-cljs compile test")
+           (shell "node target/test.js")
+           (println "\n🧪 Running E2E tests...")
+           (shell "npx playwright test")
+           (println "\n✅ All tests complete!"))}
+
+  coverage
+  {:doc "Generate test coverage report for backend"
+   :task (do
+           (println "📊 Generating backend test coverage...")
+           (shell "clj -M:coverage")
+           (println "\n✅ Coverage report generated in target/coverage/")
+           (println "   Open target/coverage/index.html to view the report"))}
+
   ;; Build tasks
   build
   {:doc "Build all production artifacts (frontend + CSS + uberjar)"

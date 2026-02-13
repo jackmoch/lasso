@@ -1,5 +1,9 @@
 # Lasso
 
+[![CI](https://github.com/jackmoch/lasso/workflows/CI/badge.svg)](https://github.com/jackmoch/lasso/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/jackmoch/lasso/branch/main/graph/badge.svg)](https://codecov.io/gh/jackmoch/lasso)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 > Track your Spotify Jam listening on Last.fm
 
 Lasso enables Last.fm users to scrobble their listening history during Spotify Jam sessions. When participating in Spotify Jams as a guest, your listening activity isn't automatically scrobbled to Last.fm. Lasso solves this by allowing you to temporarily follow another Last.fm user and mirror their scrobbles in real-time.

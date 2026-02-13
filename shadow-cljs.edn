@@ -1,4 +1,4 @@
-{:source-paths ["src/cljs"]
+{:source-paths ["src/cljs" "test/cljs"]
 
  :dependencies [[reagent "1.2.0"]
                 [re-frame "1.4.3"]
@@ -17,4 +17,10 @@
    :devtools {:before-load lasso.core/before-reload
               :after-load lasso.core/after-reload
               :http-port 8280
-              :http-root "resources/public"}}}}}
+              :http-root "resources/public"}}
+
+  :test
+  {:target :node-test
+   :output-to "target/test.js"
+   :autorun true
+   :runner-ns lasso.test-runner}}}}
