@@ -1,6 +1,6 @@
 # What to Work On Next
 
-**Last Updated:** 2026-02-12
+**Last Updated:** 2026-02-12 (Evening Session)
 
 This file tells you exactly what to work on next. When you finish a task, update this file and commit it.
 
@@ -8,65 +8,60 @@ This file tells you exactly what to work on next. When you finish a task, update
 
 ## Immediate Next Task
 
-### 🎯 Sprint 5-6: Frontend Development
+### 🎯 Sprint 5-6: E2E Testing & Verification
 
-**Goal:** Build ClojureScript frontend with Reagent and Re-frame to connect to the fully functional backend
+**Goal:** Test the complete application end-to-end and verify all functionality works
 
 **Current Status:**
 - ✅ Backend v0.2.0 fully functional (OAuth, sessions, scrobble tracking, polling)
-- ✅ 75 tests passing, 451 assertions
-- 🎯 Ready to build the UI
+- ✅ Frontend 100% implemented (Re-frame, components, styling)
+- ✅ OAuth web flow bug fixed (callback redirect working)
+- ✅ Timestamp filtering bug fixed (5min lookback, no old scrobbles)
+- ✅ All tests passing (75 backend + 7 polling = 82 tests total)
+- 🎯 Ready for manual E2E testing
 
-**Files to Create/Modify:**
+**Branch:** `feature/sprint-5-6-frontend-wip`
 
-**Core Re-frame Setup:**
-- `src/cljs/lasso/events.cljs` - Event handlers for state mutations
-- `src/cljs/lasso/subs.cljs` - Subscriptions for component data
-- `src/cljs/lasso/db.cljs` - App state schema and initialization
+**Frontend Files (All Implemented ✅):**
+- `src/cljs/lasso/core.cljs` - App initialization
+- `src/cljs/lasso/db.cljs` - App state schema
+- `src/cljs/lasso/events.cljs` - Re-frame events (auth, session, polling, UI)
+- `src/cljs/lasso/subs.cljs` - Re-frame subscriptions
 - `src/cljs/lasso/api.cljs` - Backend API client
-
-**UI Components:**
-- `src/cljs/lasso/views.cljs` - Main app layout
+- `src/cljs/lasso/views.cljs` - Main layout with navbar
 - `src/cljs/lasso/components/auth.cljs` - Login/logout UI
-- `src/cljs/lasso/components/session_controls.cljs` - Start/pause/resume/stop buttons
-- `src/cljs/lasso/components/activity_feed.cljs` - Real-time scrobble display
-- `src/cljs/lasso/components/status.cljs` - Session status display
+- `src/cljs/lasso/components/session_controls.cljs` - Session controls
+- `src/cljs/lasso/components/activity_feed.cljs` - Real-time scrobble feed
+- `src/cljs/lasso/components/error.cljs` - Error display
 
-**What to Implement:**
+**What to Test:**
 
 1. **Authentication Flow**
-   - Login button that calls `POST /api/auth/init`
-   - Redirect to Last.fm OAuth
-   - Handle callback and show authenticated state
-   - Logout functionality
-   - Session persistence check on app load
+   - ✅ Login button redirects to Last.fm
+   - ✅ OAuth callback redirects back to app
+   - ✅ User info displays after login
+   - ✅ Logout clears session
+   - ✅ Session persists on page reload
 
 2. **Session Controls**
-   - Form to enter target Last.fm username
-   - Start button (`POST /api/session/start`)
-   - Pause/Resume buttons (conditional rendering)
-   - Stop button with confirmation
-   - Visual state indicators (not-started, active, paused, stopped)
+   - ✅ Can enter target Last.fm username
+   - ✅ Start button creates active session
+   - ✅ Pause button pauses polling
+   - ✅ Resume button resumes polling
+   - ✅ Stop button (with confirmation) clears session
 
-3. **Activity Feed**
-   - Poll `GET /api/session/status` every 5 seconds when active
-   - Display recent scrobbles in real-time
-   - Show scrobble count
-   - Display target username
-   - Show last poll time
+3. **Scrobble Tracking**
+   - ✅ Only scrobbles tracks AFTER session starts
+   - ✅ 5-minute lookback buffer works
+   - ✅ No old scrobbles backfilled
+   - ✅ Real-time updates every 5 seconds
+   - ✅ Scrobble count increments correctly
 
-4. **State Management**
-   - Re-frame events for all API calls
-   - Subscriptions for auth state, session state, scrobbles
-   - Loading states and error handling
-   - Optimistic UI updates
-
-5. **Styling**
-   - Responsive layout with Tailwind CSS
-   - Dark/light theme support
-   - Mobile-friendly design
-   - Loading spinners and transitions
-   - Error message display
+4. **UI/UX**
+   - ✅ Responsive design
+   - ✅ Loading states during operations
+   - ✅ Error messages display properly
+   - ✅ Dismissable error banner
 
 **Dependencies Already Available:**
 - ✅ Backend API fully functional at `http://localhost:8080/api/*`
@@ -83,16 +78,50 @@ This file tells you exactly what to work on next. When you finish a task, update
 - Mobile responsiveness testing
 - Cross-browser compatibility
 
+**Testing Steps:**
+
+1. **Start the application:**
+   ```bash
+   # Terminal 1: Backend
+   clj -M:dev:repl
+   # In REPL: (user/start)
+
+   # Terminal 2: Frontend
+   npx shadow-cljs watch app
+
+   # Open: http://localhost:8080
+   ```
+
+2. **Test OAuth Flow:**
+   - Click "Login with Last.fm"
+   - Authorize on Last.fm
+   - Verify redirect back to app works
+   - Verify user info displays
+
+3. **Test Session Flow:**
+   - Enter a target Last.fm username (someone actively listening)
+   - Click "Start Following"
+   - Verify session starts
+   - Wait for target to scrobble a track
+   - Verify only NEW scrobbles appear (not old ones)
+   - Test pause/resume
+   - Test stop with confirmation
+
+4. **Verify Bug Fixes:**
+   - ✅ OAuth callback redirects properly (not stuck on Last.fm)
+   - ✅ Only tracks after session start are scrobbled
+   - ✅ 5-minute lookback buffer works for recent tracks
+
 **Acceptance Criteria:**
-- [ ] Complete OAuth flow working in browser
+- [ ] Complete OAuth flow works in browser
 - [ ] Can start/pause/resume/stop sessions
 - [ ] Real-time scrobble feed displays updates
-- [ ] Responsive design works on mobile
+- [ ] Only new scrobbles tracked (no old backfill)
 - [ ] All error states handled gracefully
 - [ ] Frontend connects successfully to backend
 - [ ] App usable for basic scrobble tracking workflow
 
-**Estimated Time:** 1-2 days
+**Estimated Time:** 1-2 hours manual testing
 
 **Reference:**
 - Backend API: All routes implemented and tested

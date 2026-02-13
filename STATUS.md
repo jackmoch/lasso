@@ -1,7 +1,7 @@
 # Project Status
 
 **Last Updated:** 2026-02-12
-**Current Sprint:** Sprint 5-6 (Frontend Development - Not Started)
+**Current Sprint:** Sprint 5-6 (Frontend Development - In Progress)
 **Project Phase:** Alpha Development (Pre-Launch)
 
 ---
@@ -11,9 +11,9 @@
 - **Version:** v0.2.0 (released 2026-02-12)
 - **Main Branch:** Production-ready v0.2.0, backend fully functional
 - **Develop Branch:** Synced with main at v0.2.0
-- **Active Work:** None (ready for Sprint 5-6)
+- **Active Work:** `feature/sprint-5-6-frontend-wip` - Frontend complete, bug fixes applied
 - **Blockers:** None
-- **Next Milestone:** v0.3.0 (Sprint 5-6: Frontend implementation)
+- **Next Milestone:** v0.3.0 (Sprint 5-6: Complete + E2E testing)
 
 ---
 
@@ -92,9 +92,25 @@ test/clj/lasso/                   ✅ Full test coverage
 
 ## What's In Progress
 
-**Nothing currently in progress.**
+**Sprint 5-6: Frontend Development (95% Complete)**
 
-Ready to start Sprint 5-6: Frontend Development
+Branch: `feature/sprint-5-6-frontend-wip`
+
+Completed:
+- ✅ Complete Re-frame architecture (db, events, subs)
+- ✅ Full API client implementation
+- ✅ Authentication UI (login/logout)
+- ✅ Session controls (start/pause/resume/stop)
+- ✅ Activity feed with real-time polling
+- ✅ Error handling and loading states
+- ✅ Tailwind CSS styling
+- ✅ **BUG FIX:** OAuth web flow (callback redirect working)
+- ✅ **BUG FIX:** Timestamp filtering (5min lookback, no old scrobbles)
+
+Ready for Testing:
+- [ ] E2E testing with real Last.fm accounts
+- [ ] Manual verification of all flows
+- [ ] Mobile responsiveness testing
 
 ---
 
