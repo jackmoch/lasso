@@ -15,12 +15,18 @@
 (defn mount-root
   "Mount the root component to the DOM."
   []
+  (js/console.log "🔧 mount-root called")
   (rf/clear-subscription-cache!)
-  (rdom/render root [views/main-panel]))
+  (rdom/render root [views/main-panel])
+  (js/console.log "✅ Root mounted"))
 
 (defn ^:export init
   "Initialize the application."
   []
+  (js/console.log "🚀 APP INITIALIZING...")
   (rf/dispatch-sync [:initialize-db])
+  (js/console.log "✅ DB initialized")
   (rf/dispatch [:check-auth])
-  (mount-root))
+  (js/console.log "✅ Auth check dispatched")
+  (mount-root)
+  (js/console.log "✅ APP INITIALIZED"))

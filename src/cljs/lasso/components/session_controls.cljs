@@ -8,6 +8,7 @@
   []
   (let [username-input (r/atom "")]
     (fn []
+      (js/console.log "📝 target-username-form RENDER")
       (let [can-start? @(rf/subscribe [:session/can-start?])
             loading? @(rf/subscribe [:ui/session-control-loading?])]
         [:div.space-y-3
@@ -34,24 +35,45 @@
   []
   (let [show-confirm? (r/atom false)]
     (fn []
-      (let [can-pause? @(rf/subscribe [:session/can-pause?])
+      (js/console.log "🎛️ control-buttons RENDER START")
+      (let [state @(rf/subscribe [:session/state])
+            can-pause? @(rf/subscribe [:session/can-pause?])
             can-resume? @(rf/subscribe [:session/can-resume?])
             can-stop? @(rf/subscribe [:session/can-stop?])
             loading? @(rf/subscribe [:ui/session-control-loading?])]
+
+        ;; DETAILED DEBUG LOGGING
+        (js/console.log "🎛️ control-buttons VALUES:"
+                       (clj->js {:state state
+                                 :can-pause can-pause?
+                                 :can-resume can-resume?
+                                 :can-stop can-stop?
+                                 :loading loading?}))
+
         [:div.space-y-3
          ;; Pause button
-         (when can-pause?
-           [:button.btn-secondary.w-full
-            {:on-click #(rf/dispatch [:session/pause])
-             :disabled loading?}
-            (if loading? "Pausing..." "Pause Session")])
+         (do
+           (when can-pause?
+             (js/console.log "  ✓ Rendering PAUSE button"))
+           (when can-pause?
+             [:button.btn-secondary.w-full
+              {:on-click #(do
+                            (js/console.log "🖱️ PAUSE BUTTON CLICKED")
+                            (rf/dispatch [:session/pause]))
+               :disabled loading?}
+              (if loading? "Pausing..." "Pause Session")]))
 
          ;; Resume button
-         (when can-resume?
-           [:button.btn-primary.w-full
-            {:on-click #(rf/dispatch [:session/resume])
-             :disabled loading?}
-            (if loading? "Resuming..." "Resume Session")])
+         (do
+           (when can-resume?
+             (js/console.log "  ✓ Rendering RESUME button"))
+           (when can-resume?
+             [:button.btn-primary.w-full
+              {:on-click #(do
+                            (js/console.log "🖱️ RESUME BUTTON CLICKED")
+                            (rf/dispatch [:session/resume]))
+               :disabled loading?}
+              (if loading? "Resuming..." "Resume Session")]))
 
          ;; Stop button with confirmation
          (when can-stop?
@@ -81,8 +103,10 @@
   "Main session controls container."
   []
   (fn []
+    (js/console.log "📦 session-controls RENDER")
     (let [authenticated? @(rf/subscribe [:auth/authenticated?])
           can-start? @(rf/subscribe [:session/can-start?])]
+      (js/console.log "📦 session-controls authenticated?:" authenticated? "can-start?:" can-start?)
       (when authenticated?
         [:div.bg-white.rounded-lg.shadow.p-6.mb-6
          [:h2.text-xl.font-semibold.text-gray-900.mb-4

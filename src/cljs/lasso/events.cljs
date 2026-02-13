@@ -145,6 +145,7 @@
 (rf/reg-event-fx
  :session/pause
  (fn [{:keys [db]} _]
+   (js/console.log "🔵 EVENT: :session/pause - Setting loading=true, calling API")
    {:db (assoc-in db [:ui :session-control-loading?] true)
     :http-xhrio (api/pause-session
                  [:session/pause-success]
@@ -153,10 +154,13 @@
 (rf/reg-event-fx
  :session/pause-success
  (fn [{:keys [db]} _]
-   {:db (-> db
-            (assoc-in [:ui :session-control-loading?] false)
-            (assoc-in [:session :state] :paused))
-    :dispatch [:session/stop-polling]}))
+   (js/console.log "✅ EVENT: :session/pause-success - Setting state=:paused, loading=false")
+   (let [new-db (-> db
+                    (assoc-in [:ui :session-control-loading?] false)
+                    (assoc-in [:session :state] :paused))]
+     (js/console.log "📊 New DB state:" (clj->js (select-keys (:session new-db) [:state])))
+     {:db new-db
+      :dispatch [:session/stop-polling]})))
 
 (rf/reg-event-db
  :session/pause-failure
@@ -168,6 +172,7 @@
 (rf/reg-event-fx
  :session/resume
  (fn [{:keys [db]} _]
+   (js/console.log "🔵 EVENT: :session/resume - Setting loading=true, calling API")
    {:db (assoc-in db [:ui :session-control-loading?] true)
     :http-xhrio (api/resume-session
                  [:session/resume-success]
@@ -176,10 +181,13 @@
 (rf/reg-event-fx
  :session/resume-success
  (fn [{:keys [db]} _]
-   {:db (-> db
-            (assoc-in [:ui :session-control-loading?] false)
-            (assoc-in [:session :state] :active))
-    :dispatch [:session/start-polling]}))
+   (js/console.log "✅ EVENT: :session/resume-success - Setting state=:active, loading=false")
+   (let [new-db (-> db
+                    (assoc-in [:ui :session-control-loading?] false)
+                    (assoc-in [:session :state] :active))]
+     (js/console.log "📊 New DB state:" (clj->js (select-keys (:session new-db) [:state])))
+     {:db new-db
+      :dispatch [:session/start-polling]})))
 
 (rf/reg-event-db
  :session/resume-failure

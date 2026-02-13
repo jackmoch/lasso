@@ -28,7 +28,9 @@
   "Main application panel component."
   []
   (fn []
+    (js/console.log "🎨 MAIN-PANEL RENDER")
     (let [checking? @(rf/subscribe [:auth/checking?])]
+      (js/console.log "🎨 main-panel checking?:" checking?)
       (if checking?
         [loading-spinner]
         [:div.min-h-screen.bg-gray-50
