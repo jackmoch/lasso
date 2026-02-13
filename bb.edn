@@ -93,7 +93,9 @@
 
   test:frontend
   {:doc "Run frontend ClojureScript tests"
-   :task (shell "npx shadow-cljs compile test && node target/test.js")}
+   :task (do
+           (shell "npx shadow-cljs compile test")
+           (shell "node target/test.js"))}
 
   test:frontend:watch
   {:doc "Run frontend tests in watch mode"
@@ -105,7 +107,8 @@
            (println "🧪 Running backend tests...")
            (shell "clj -M:test")
            (println "\n🧪 Running frontend tests...")
-           (shell "npx shadow-cljs compile test && node target/test.js")
+           (shell "npx shadow-cljs compile test")
+           (shell "node target/test.js")
            (println "\n✅ All tests complete!"))}
 
   ;; Build tasks
