@@ -55,39 +55,70 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Common Commands
 
-### Development
+### Development (Quick Start)
+
+**🎯 Recommended: One-command startup (Babashka)**
 
 ```bash
-# Start backend REPL (Terminal 1)
-clj -M:dev:repl
-# In REPL: (user/start) to start server
+# Install babashka (one-time setup)
+brew install babashka  # macOS
+# or see: https://github.com/babashka/babashka#installation
 
-# Start frontend with hot reload (Terminal 2)
-npx shadow-cljs watch app
+# Start everything (backend + frontend + hot reload)
+bb dev
 
-# Watch CSS changes (Terminal 3)
-npm run watch:css
-# or build once:
-npm run build:css
+# That's it! Open http://localhost:8080
+# Use Ctrl+C to stop everything
+```
+
+**Alternative: REPL-driven workflow (shadow-cljs integrated)**
+
+```bash
+# Start REPL with integrated shadow-cljs
+clj -M:dev
+
+# In REPL: Start everything with one command
+user=> (start)   ; or (go)
+; ✅ Ready! Open http://localhost:8080
 
 # REPL utilities
-(user/start)    # Start server
-(user/stop)     # Stop server
-(user/restart)  # Restart server
-(user/reset)    # Stop, reload namespaces, restart
+(stop)          # Stop backend + frontend
+(restart)       # Restart everything
+(reset)         # Reload namespaces + restart
+(cljs-repl)     # Start ClojureScript REPL
+(start-backend) # Start only backend
+(start-frontend)# Start only frontend
+```
+
+**Manual control (individual processes)**
+
+```bash
+# Start frontend only
+bb frontend
+# or: npx shadow-cljs watch app
+
+# Start CSS watch only
+bb css
+# or: npm run watch:css
 ```
 
 ### Testing
 
 ```bash
 # Backend tests
-clj -M:test
+bb test
+# or: clj -M:test
 
 # Run specific test namespace
-clj -M:test --focus lasso.auth.core-test
+bb test:focus lasso.auth.core-test
+# or: clj -M:test --focus lasso.auth.core-test
+
+# Watch mode (auto-run on file changes)
+bb test:watch
 
 # Lint code
-clj-kondo --lint src
+bb lint
+# or: clj-kondo --lint src test
 
 # Frontend tests (when implemented)
 npx shadow-cljs compile test
@@ -97,21 +128,26 @@ node target/test.js
 ### Building
 
 ```bash
-# Production frontend build
-npx shadow-cljs release app
+# Build all production artifacts (frontend + CSS + uberjar)
+bb build
 
-# Minified CSS
-npm run build:css
-
-# Backend uberjar
-clj -X:uberjar
+# Or build individually:
+bb frontend:build  # Frontend only
+bb css:build       # CSS only
+bb uberjar         # Backend only
 
 # Docker image
-docker build -t lasso:latest .
+bb docker:build
+# or: docker build -t lasso:latest .
 
 # Clean build artifacts
-npm run clean
-rm -rf target .cpcache
+bb clean
+
+# Full clean (including node_modules)
+bb clean:full
+
+# See all available tasks
+bb tasks
 ```
 
 ## Architecture
@@ -204,14 +240,35 @@ src/
 
 ## Development Workflow
 
+### Integrated Development Environment
+
+**One-command startup** brings up the entire development environment:
+- Backend server (Pedestal + Jetty)
+- Frontend watch (shadow-cljs with hot reload)
+- ClojureScript compilation
+- All in one REPL session
+
+**Two approaches:**
+
+**1. Babashka Tasks (Simplest)**
+```bash
+bb dev  # Starts integrated REPL with everything running
+```
+
+**2. Direct REPL (More control)**
+```bash
+clj -M:dev:repl
+user=> (start)  # Starts backend + frontend watch
+```
+
 ### REPL-Driven Development
 
-The backend uses REPL-driven development:
-1. Start REPL with `clj -M:dev:repl`
-2. Evaluate `(user/start)` to start server
-3. Make code changes
-4. Reload with `(user/restart)` or `(user/reset)` for full namespace reload
-5. Test functions directly in REPL
+The integrated REPL provides:
+1. **Auto-start**: `(start)` or `(go)` starts backend + frontend together
+2. **Hot reload**: Both Clojure and ClojureScript changes reload automatically
+3. **Namespace refresh**: `(reset)` reloads all Clojure namespaces
+4. **ClojureScript REPL**: `(cljs-repl)` connects to browser for interactive CLJS development
+5. **Individual control**: `(start-backend)`, `(start-frontend)` for granular control
 
 ### Frontend Hot Reload
 
@@ -220,6 +277,25 @@ shadow-cljs provides instant feedback:
 2. Save - changes appear immediately in browser
 3. Re-frame state preserved across reloads
 4. Check browser console for compilation errors
+5. No need to restart - shadow-cljs handles everything
+
+### Backend Development
+
+Clojure backend changes:
+1. **Simple changes**: Just reload the namespace in REPL
+2. **Route/handler changes**: `(user/restart)` to reload routes
+3. **Deep changes**: `(user/reset)` to reload all namespaces
+4. **No server restart needed** for most changes
+
+### ClojureScript REPL
+
+Connect to the browser for interactive ClojureScript development:
+```clojure
+user=> (cljs-repl)
+; Opens CLJS REPL connected to browser
+cljs.user=> (js/alert "Hello from REPL!")
+cljs.user=> :cljs/quit  ; Return to Clojure REPL
+```
 
 ### Gitflow Workflow (IMPORTANT)
 

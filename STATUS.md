@@ -187,19 +187,20 @@ See `MEMORY.md` for more context on decisions and gotchas.
 ## Quick Commands
 
 ```bash
-# Development
-clj -M:dev:repl              # Start backend REPL
-npx shadow-cljs watch app    # Start frontend hot reload
-npm run watch:css            # Watch CSS changes
+# Development (ONE COMMAND!)
+bb dev                       # Start everything (backend + frontend + hot reload)
+# or: clj -M:dev:repl then (start)
 
-# Testing
-clj -M:test                  # Run all tests (75 tests)
-./scripts/wait-for-ci.sh 7   # Wait for PR CI
+# Other useful tasks
+bb test                      # Run all tests (82 tests)
+bb build                     # Build production artifacts
+bb clean                     # Clean build artifacts
+bb tasks                     # See all available tasks
 
 # Git (Gitflow)
 git checkout develop         # Work from develop
 git checkout -b feature/X    # Create feature branch
-gh pr create --base develop  # PR to develop (NOT main!)
+bb pr                        # Create PR to develop
 ```
 
 ---
