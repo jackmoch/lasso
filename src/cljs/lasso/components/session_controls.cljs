@@ -6,28 +6,28 @@
 (defn target-username-form
   "Input form for entering target Last.fm username."
   []
-  (let [username-input (r/atom "")
-        can-start? @(rf/subscribe [:session/can-start?])
-        loading? @(rf/subscribe [:ui/session-control-loading?])]
+  (let [username-input (r/atom "")]
     (fn []
-      [:div.space-y-3
-       [:label.block
-        [:span.text-sm.font-medium.text-gray-700.mb-1.block
-         "Enter Last.fm username to follow:"]
-        [:input.w-full.px-4.py-2.border.border-gray-300.rounded-md.focus:ring-2.focus:ring-red-500.focus:border-transparent
-         {:type "text"
-          :placeholder "e.g., johndoe"
-          :value @username-input
-          :disabled (not can-start?)
-          :on-change #(reset! username-input (-> % .-target .-value))
-          :on-key-press #(when (and (= "Enter" (.-key %))
-                                    (not (empty? @username-input)))
-                           (rf/dispatch [:session/start @username-input]))}]]
-       [:button.btn-primary.w-full
-        {:on-click #(when-not (empty? @username-input)
-                      (rf/dispatch [:session/start @username-input]))
-         :disabled (or (not can-start?) loading? (empty? @username-input))}
-        (if loading? "Starting..." "Start Following")]])))
+      (let [can-start? @(rf/subscribe [:session/can-start?])
+            loading? @(rf/subscribe [:ui/session-control-loading?])]
+        [:div.space-y-3
+         [:label.block
+          [:span.text-sm.font-medium.text-gray-700.mb-1.block
+           "Enter Last.fm username to follow:"]
+          [:input.w-full.px-4.py-2.border.border-gray-300.rounded-md.focus:ring-2.focus:ring-red-500.focus:border-transparent
+           {:type "text"
+            :placeholder "e.g., johndoe"
+            :value @username-input
+            :disabled (not can-start?)
+            :on-change #(reset! username-input (-> % .-target .-value))
+            :on-key-press #(when (and (= "Enter" (.-key %))
+                                      (not (empty? @username-input)))
+                             (rf/dispatch [:session/start @username-input]))}]]
+         [:button.btn-primary.w-full
+          {:on-click #(when-not (empty? @username-input)
+                        (rf/dispatch [:session/start @username-input]))
+           :disabled (or (not can-start?) loading? (empty? @username-input))}
+          (if loading? "Starting..." "Start Following")]]))))
 
 (defn control-buttons
   "Session control buttons (pause/resume/stop)."
@@ -39,17 +39,22 @@
             can-stop? @(rf/subscribe [:session/can-stop?])
             loading? @(rf/subscribe [:ui/session-control-loading?])]
         [:div.space-y-3
+         {:key (str "controls-" (cond can-pause? "pause"
+                                     can-resume? "resume"
+                                     :else "none"))}
          ;; Pause button
          (when can-pause?
            [:button.btn-secondary.w-full
-            {:on-click #(rf/dispatch [:session/pause])
+            {:key "pause-btn"
+             :on-click #(rf/dispatch [:session/pause])
              :disabled loading?}
             (if loading? "Pausing..." "Pause Session")])
 
          ;; Resume button
          (when can-resume?
            [:button.btn-primary.w-full
-            {:on-click #(rf/dispatch [:session/resume])
+            {:key "resume-btn"
+             :on-click #(rf/dispatch [:session/resume])
              :disabled loading?}
             (if loading? "Resuming..." "Resume Session")])
 
@@ -57,6 +62,7 @@
          (when can-stop?
            (if @show-confirm?
              [:div.bg-yellow-50.border.border-yellow-200.rounded-md.p-4.space-y-3
+              {:key "confirm-dialog"}
               [:p.text-sm.text-yellow-800.font-medium
                "Are you sure you want to stop this session?"]
               [:p.text-xs.text-yellow-700
@@ -73,21 +79,20 @@
                  :disabled loading?}
                 "Cancel"]]]
              [:button.px-4.py-2.w-full.bg-red-600.text-white.rounded-md.hover:bg-red-700.transition-colors
-              {:on-click #(reset! show-confirm? true)
+              {:key "stop-btn"
+               :on-click #(reset! show-confirm? true)
                :disabled loading?}
               "Stop Session"]))]))))
 
 (defn session-controls
   "Main session controls container."
   []
-  (fn []
-    (let [authenticated? @(rf/subscribe [:auth/authenticated?])
-          can-start? @(rf/subscribe [:session/can-start?])
-          is-active? @(rf/subscribe [:session/is-active?])]
-      (when authenticated?
-        [:div.bg-white.rounded-lg.shadow.p-6.mb-6
-         [:h2.text-xl.font-semibold.text-gray-900.mb-4
-          "Session Controls"]
-         (if can-start?
-           [target-username-form]
-           [control-buttons])]))))
+  (let [authenticated? @(rf/subscribe [:auth/authenticated?])
+        can-start? @(rf/subscribe [:session/can-start?])]
+    (when authenticated?
+      [:div.bg-white.rounded-lg.shadow.p-6.mb-6
+       [:h2.text-xl.font-semibold.text-gray-900.mb-4
+        "Session Controls"]
+       (if can-start?
+         [target-username-form]
+         [control-buttons])])))
