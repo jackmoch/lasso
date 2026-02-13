@@ -12,13 +12,13 @@
 
 (defn generate-auth-url
   "Generate the URL for user to authorize the application.
-   Takes the token from get-token.
+   For WEB authentication flow: No token needed - Last.fm generates the token
+   and passes it to the callback URL after user authorization.
    Includes callback URL so Last.fm knows where to redirect after authorization."
-  [token]
+  []
   (let [api-key (get-in config/config [:lastfm :api-key])
         callback-url (get-in config/config [:lastfm :callback-url])]
     (str "https://www.last.fm/api/auth/?api_key=" api-key
-         "&token=" token
          "&cb=" (java.net.URLEncoder/encode callback-url "UTF-8"))))
 
 (defn get-session-key
