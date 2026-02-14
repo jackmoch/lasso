@@ -5,7 +5,8 @@
             [clojure.data.json :as json]
             [lasso.auth.handlers :as auth-handlers]
             [lasso.session.handlers :as session-handlers]
-            [lasso.middleware :as mw]))
+            [lasso.middleware :as mw]
+            [lasso.middleware.security :as security]))
 
 (defn home-page
   "Serve the main application page."
@@ -22,7 +23,8 @@
    :body (json/write-str {:status "ok"})})
 
 (def routes
-  "Application route definitions."
+  "Application route definitions.
+   Security interceptors are applied globally in server configuration."
   (route/expand-routes
    #{["/" :get home-page :route-name :home]
      ["/health" :get health-check :route-name :health]
