@@ -1,0 +1,320 @@
+name: Deploy to Production
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to deploy (e.g., v1.0.0)'
+        required: true
+        type: string
+
+env:
+  GCP_PROJECT_ID: lasso-scrobbler-0667
+  GCP_REGION: us-central1
+  SERVICE_NAME: lasso
+  ENVIRONMENT: production
+
+jobs:
+  deploy-production:
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: ${{ steps.get-url.outputs.url }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.version || github.ref }}
+
+      - name: Extract version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+          else
+            VERSION="${GITHUB_REF#refs/tags/}"
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "📦 Deploying version: $VERSION"
+
+      - name: Verify version in VERSION file
+        run: |
+          EXPECTED_VERSION="${{ steps.version.outputs.version }}"
+          EXPECTED_VERSION="${EXPECTED_VERSION#v}"  # Remove 'v' prefix
+          FILE_VERSION=$(cat VERSION)
+
+          if [ "$FILE_VERSION" != "$EXPECTED_VERSION" ]; then
+            echo "❌ Version mismatch!"
+            echo "  Tag/Input: $EXPECTED_VERSION"
+            echo "  VERSION file: $FILE_VERSION"
+            exit 1
+          fi
+          echo "✅ Version verified: $FILE_VERSION"
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker for GCR
+        run: gcloud auth configure-docker gcr.io
+
+      - name: Check if image exists
+        id: check-image
+        run: |
+          IMAGE="gcr.io/${{ env.GCP_PROJECT_ID }}/lasso:${{ github.sha }}"
+          if gcloud container images describe $IMAGE &>/dev/null; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "✅ Image already exists in GCR"
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "ℹ️  Image not found, will build fresh"
+          fi
+
+      - name: Build Docker image
+        if: steps.check-image.outputs.exists == 'false'
+        run: |
+          echo "🔨 Building Docker image for production..."
+          docker build -t gcr.io/${{ env.GCP_PROJECT_ID }}/lasso:${{ github.sha }} \
+                       -t gcr.io/${{ env.GCP_PROJECT_ID }}/lasso:${{ steps.version.outputs.version }} \
+                       -t gcr.io/${{ env.GCP_PROJECT_ID }}/lasso:latest .
+
+      - name: Push Docker image to GCR
+        if: steps.check-image.outputs.exists == 'false'
+        run: |
+          echo "📦 Pushing image to Google Container Registry..."
+          docker push gcr.io/${{ env.GCP_PROJECT_ID }}/lasso:${{ github.sha }}
+          docker push gcr.io/${{ env.GCP_PROJECT_ID }}/lasso:${{ steps.version.outputs.version }}
+          docker push gcr.io/${{ env.GCP_PROJECT_ID }}/lasso:latest
+
+      - name: Tag existing image with version
+        if: steps.check-image.outputs.exists == 'true'
+        run: |
+          echo "🏷️  Tagging existing image with version..."
+          gcloud container images add-tag \
+            gcr.io/${{ env.GCP_PROJECT_ID }}/lasso:${{ github.sha }} \
+            gcr.io/${{ env.GCP_PROJECT_ID }}/lasso:${{ steps.version.outputs.version }} \
+            --quiet
+          gcloud container images add-tag \
+            gcr.io/${{ env.GCP_PROJECT_ID }}/lasso:${{ github.sha }} \
+            gcr.io/${{ env.GCP_PROJECT_ID }}/lasso:latest \
+            --quiet
+
+      - name: Get current revision (for rollback)
+        id: current-revision
+        run: |
+          CURRENT_REVISION=$(gcloud run services describe ${{ env.SERVICE_NAME }} \
+            --region ${{ env.GCP_REGION }} \
+            --format 'value(status.latestReadyRevisionName)' 2>/dev/null || echo "none")
+          echo "revision=$CURRENT_REVISION" >> $GITHUB_OUTPUT
+          echo "📋 Current revision: $CURRENT_REVISION"
+
+      - name: Deploy to Cloud Run (Production)
+        id: deploy
+        run: |
+          echo "🚀 Deploying to Cloud Run production environment..."
+          gcloud run deploy ${{ env.SERVICE_NAME }} \
+            --image gcr.io/${{ env.GCP_PROJECT_ID }}/lasso:${{ github.sha }} \
+            --platform managed \
+            --region ${{ env.GCP_REGION }} \
+            --allow-unauthenticated \
+            --memory 512Mi \
+            --cpu 1 \
+            --max-instances 20 \
+            --min-instances 1 \
+            --set-env-vars ENVIRONMENT=${{ env.ENVIRONMENT }},LASTFM_API_BASE_URL=https://ws.audioscrobbler.com,LASTFM_AUTH_URL=https://www.last.fm,LOG_LEVEL=info \
+            --set-secrets LASTFM_API_KEY=lastfm-api-key:latest,LASTFM_API_SECRET=lastfm-api-secret:latest,SESSION_SECRET=session-secret:latest \
+            --no-traffic  # Deploy without routing traffic initially
+
+      - name: Get new revision name
+        id: new-revision
+        run: |
+          NEW_REVISION=$(gcloud run services describe ${{ env.SERVICE_NAME }} \
+            --region ${{ env.GCP_REGION }} \
+            --format 'value(status.latestCreatedRevisionName)')
+          echo "revision=$NEW_REVISION" >> $GITHUB_OUTPUT
+          echo "📋 New revision: $NEW_REVISION"
+
+      - name: Get service URL
+        id: get-url
+        run: |
+          SERVICE_URL=$(gcloud run services describe ${{ env.SERVICE_NAME }} \
+            --region ${{ env.GCP_REGION }} \
+            --format 'value(status.url)')
+          echo "url=$SERVICE_URL" >> $GITHUB_OUTPUT
+          echo "🌐 Service URL: $SERVICE_URL"
+
+      - name: Run health checks on new revision
+        run: |
+          echo "🧪 Running health checks on new revision..."
+          SERVICE_URL="${{ steps.get-url.outputs.url }}"
+          REVISION_URL="https://${{ steps.new-revision.outputs.revision }}---$(echo $SERVICE_URL | sed 's|https://||')"
+
+          echo "Testing new revision at: $REVISION_URL"
+
+          # Wait for revision to be ready
+          echo "Waiting for revision to be ready..."
+          sleep 10
+
+          # Health check
+          echo "Testing health endpoint..."
+          for i in {1..5}; do
+            health_status=$(curl -s -o /dev/null -w "%{http_code}" \
+              -H "X-Serverless-Authorization: Bearer $(gcloud auth print-identity-token)" \
+              $REVISION_URL/health)
+            if [ "$health_status" == "200" ]; then
+              echo "✅ Health check passed (attempt $i)"
+              break
+            fi
+            if [ $i -eq 5 ]; then
+              echo "❌ Health check failed after 5 attempts"
+              exit 1
+            fi
+            echo "⏳ Waiting... (attempt $i)"
+            sleep 5
+          done
+
+          # Home page check
+          echo "Testing home page..."
+          home_status=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "X-Serverless-Authorization: Bearer $(gcloud auth print-identity-token)" \
+            $REVISION_URL/)
+          if [ "$home_status" != "200" ]; then
+            echo "❌ Home page check failed: $home_status"
+            exit 1
+          fi
+          echo "✅ Home page check passed"
+
+          # Static assets check
+          echo "Testing static assets..."
+          css_status=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "X-Serverless-Authorization: Bearer $(gcloud auth print-identity-token)" \
+            $REVISION_URL/css/tailwind.css)
+          js_status=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "X-Serverless-Authorization: Bearer $(gcloud auth print-identity-token)" \
+            $REVISION_URL/js/main.js)
+
+          if [ "$css_status" != "200" ] || [ "$js_status" != "200" ]; then
+            echo "❌ Static assets check failed (CSS: $css_status, JS: $js_status)"
+            exit 1
+          fi
+          echo "✅ Static assets check passed"
+
+      - name: Route traffic to new revision
+        run: |
+          echo "🔀 Routing 100% traffic to new revision..."
+          gcloud run services update-traffic ${{ env.SERVICE_NAME }} \
+            --region ${{ env.GCP_REGION }} \
+            --to-revisions ${{ steps.new-revision.outputs.revision }}=100
+
+      - name: Run post-deployment smoke tests
+        run: |
+          echo "🧪 Running post-deployment smoke tests..."
+          SERVICE_URL="${{ steps.get-url.outputs.url }}"
+
+          # Wait for traffic routing to complete
+          sleep 5
+
+          # Health check on main URL
+          echo "Testing production endpoint..."
+          health_status=$(curl -s -o /dev/null -w "%{http_code}" $SERVICE_URL/health)
+          if [ "$health_status" != "200" ]; then
+            echo "❌ Production health check failed: $health_status"
+            echo "🔄 Consider rollback to: ${{ steps.current-revision.outputs.revision }}"
+            exit 1
+          fi
+          echo "✅ Production health check passed"
+
+          # Response time check
+          response_time=$(curl -o /dev/null -s -w '%{time_total}\n' $SERVICE_URL/health)
+          echo "Response time: ${response_time}s"
+
+          if (( $(echo "$response_time > 3.0" | bc -l) )); then
+            echo "⚠️  Warning: Response time exceeds 3 seconds"
+          fi
+
+      - name: Deployment summary
+        run: |
+          echo "✅ Production deployment successful!"
+          echo ""
+          echo "📊 Deployment Summary:"
+          echo "  Environment: ${{ env.ENVIRONMENT }}"
+          echo "  Service: ${{ env.SERVICE_NAME }}"
+          echo "  Region: ${{ env.GCP_REGION }}"
+          echo "  Version: ${{ steps.version.outputs.version }}"
+          echo "  Image: gcr.io/${{ env.GCP_PROJECT_ID }}/lasso:${{ github.sha }}"
+          echo "  Current Revision: ${{ steps.new-revision.outputs.revision }}"
+          echo "  Previous Revision: ${{ steps.current-revision.outputs.revision }}"
+          echo "  URL: ${{ steps.get-url.outputs.url }}"
+          echo ""
+          echo "🔍 Monitoring:"
+          echo "  Logs: https://console.cloud.google.com/run/detail/${{ env.GCP_REGION }}/${{ env.SERVICE_NAME }}/logs?project=${{ env.GCP_PROJECT_ID }}"
+          echo "  Metrics: https://console.cloud.google.com/run/detail/${{ env.GCP_REGION }}/${{ env.SERVICE_NAME }}/metrics?project=${{ env.GCP_PROJECT_ID }}"
+          echo ""
+          echo "🔄 Rollback (if needed):"
+          echo "  gcloud run services update-traffic ${{ env.SERVICE_NAME }} --region ${{ env.GCP_REGION }} --to-revisions ${{ steps.current-revision.outputs.revision }}=100"
+
+      - name: Create GitHub release notes
+        if: github.event_name == 'push'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const version = '${{ steps.version.outputs.version }}';
+            const url = '${{ steps.get-url.outputs.url }}';
+            const revision = '${{ steps.new-revision.outputs.revision }}';
+
+            // Get changelog entry for this version
+            const fs = require('fs');
+            const changelog = fs.readFileSync('CHANGELOG.md', 'utf8');
+            const versionRegex = new RegExp(`## \\[${version.replace('v', '')}\\][\\s\\S]*?(?=## \\[|$)`, 'm');
+            const match = changelog.match(versionRegex);
+            const releaseNotes = match ? match[0] : 'No changelog entry found.';
+
+            github.rest.repos.updateRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              release_id: context.payload.release.id,
+              body: releaseNotes + '\n\n' +
+                    `## Deployment Information\n\n` +
+                    `🌐 **Production URL:** ${url}\n` +
+                    `📦 **Image:** gcr.io/${{ env.GCP_PROJECT_ID }}/lasso:${{ github.sha }}\n` +
+                    `🔖 **Revision:** \`${revision}\`\n` +
+                    `🌍 **Region:** ${{ env.GCP_REGION }}\n\n` +
+                    `✅ All smoke tests passed`
+            });
+
+  rollback:
+    runs-on: ubuntu-latest
+    if: failure()
+    needs: deploy-production
+    environment: production
+
+    steps:
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Rollback to previous revision
+        run: |
+          echo "🔄 Rolling back to previous revision..."
+          PREVIOUS_REVISION="${{ needs.deploy-production.outputs.current-revision }}"
+
+          if [ "$PREVIOUS_REVISION" != "none" ]; then
+            gcloud run services update-traffic ${{ env.SERVICE_NAME }} \
+              --region ${{ env.GCP_REGION }} \
+              --to-revisions $PREVIOUS_REVISION=100
+            echo "✅ Rolled back to: $PREVIOUS_REVISION"
+          else
+            echo "⚠️  No previous revision available for rollback"
+          fi
