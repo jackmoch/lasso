@@ -1,0 +1,17 @@
+# Cloud Build configuration for manual deployment testing
+# Uses pre-built artifacts from local bb build
+
+steps:
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-f'
+      - 'Dockerfile.production'
+      - '-t'
+      - 'gcr.io/lasso-scrobbler-0667/lasso:manual-test'
+      - '.'
+
+images:
+  - 'gcr.io/lasso-scrobbler-0667/lasso:manual-test'
+
+timeout: '600s'
