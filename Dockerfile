@@ -36,6 +36,10 @@ RUN clojure -P -X:uberjar
 COPY src/clj ./src/clj
 COPY resources ./resources
 
+# Copy built frontend assets from stage 1
+COPY --from=frontend-builder /app/resources/public/js ./resources/public/js
+COPY --from=frontend-builder /app/resources/public/css/tailwind.css ./resources/public/css/tailwind.css
+
 # Build uberjar
 RUN clojure -X:uberjar
 
