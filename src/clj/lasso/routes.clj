@@ -15,6 +15,30 @@
    :headers {"Content-Type" "text/html"}
    :body (slurp (io/resource "public/index.html"))})
 
+(defn serve-css
+  "Serve CSS files from classpath resources."
+  [request]
+  (let [path (get-in request [:path-params :path])
+        resource-path (str "public/css/" path)]
+    (if-let [resource (io/resource resource-path)]
+      {:status 200
+       :headers {"Content-Type" "text/css"}
+       :body (slurp resource)}
+      {:status 404
+       :body "Not found"})))
+
+(defn serve-js
+  "Serve JavaScript files from classpath resources."
+  [request]
+  (let [path (get-in request [:path-params :path])
+        resource-path (str "public/js/" path)]
+    (if-let [resource (io/resource resource-path)]
+      {:status 200
+       :headers {"Content-Type" "application/javascript"}
+       :body (slurp resource)}
+      {:status 404
+       :body "Not found"})))
+
 (defn health-check
   "Health check endpoint for container orchestration."
   [_request]
@@ -28,6 +52,10 @@
   (route/expand-routes
    #{["/" :get home-page :route-name :home]
      ["/health" :get health-check :route-name :health]
+
+     ;; Static assets
+     ["/css/*path" :get serve-css :route-name :serve-css]
+     ["/js/*path" :get serve-js :route-name :serve-js]
 
      ;; Authentication routes
      ["/api/auth/init" :post auth-handlers/auth-init-handler :route-name :auth-init]
