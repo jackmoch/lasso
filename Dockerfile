@@ -49,14 +49,9 @@ RUN addgroup -g 1001 -S lasso && \
     adduser -u 1001 -S lasso -G lasso
 
 # Copy JAR from backend builder
+# NOTE: JAR already contains all static assets (index.html, CSS, JS)
+# at the classpath location 'public/' - no need to copy separately
 COPY --from=backend-builder /app/target/lasso.jar ./lasso.jar
-
-# Copy static frontend assets from frontend builder
-COPY --from=frontend-builder /app/resources/public/js ./resources/public/js
-COPY --from=frontend-builder /app/resources/public/css ./resources/public/css
-
-# Copy index.html
-COPY resources/public/index.html ./resources/public/
 
 # Set ownership
 RUN chown -R lasso:lasso /app
