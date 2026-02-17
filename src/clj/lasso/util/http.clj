@@ -66,6 +66,6 @@
   [message & {:keys [status error-code details]
               :or {status 500}}]
   (json-response (cond-> {:error message}
-                   error-code (assoc :error-code error-code)
+                   error-code (assoc :error_code error-code)
                    details (assoc :details details))
                  :status status))

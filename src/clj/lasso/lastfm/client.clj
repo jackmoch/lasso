@@ -60,9 +60,13 @@
             request-params (if signed
                             {:form-params final-params
                              :content-type :x-www-form-urlencoded
-                             :as :json}
+                             :as :json
+                             :coerce :always
+                             :throw-exceptions false}
                             {:query-params final-params
-                             :as :json})
+                             :as :json
+                             :coerce :always
+                             :throw-exceptions false})
             response (http-method (api-base) request-params)
             body (:body response)]
         (log/debug "Last.fm API response:" (pr-str body))

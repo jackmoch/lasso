@@ -28,22 +28,22 @@
    Reads allowed origins from CORS_ALLOWED_ORIGINS environment variable."
   (interceptor
    {:name ::cors
-    :enter (fn [context]
+    :leave (fn [context]
              (let [request (:request context)
                    origin (get-in request [:headers "origin"])
                    allowed-origins (parse-allowed-origins)
                    cors-enabled (config/get-env "CORS_ENABLED" "true")]
 
                (if (and (= cors-enabled "true")
-                       origin
-                       (origin-allowed? origin allowed-origins))
-                 ;; Origin is allowed, add CORS headers
-                 (assoc-in context [:response :headers]
-                           {"Access-Control-Allow-Origin" origin
-                            "Access-Control-Allow-Credentials" "true"
-                            "Access-Control-Allow-Methods" "GET, POST, PUT, DELETE, OPTIONS"
-                            "Access-Control-Allow-Headers" "Content-Type, Authorization"
-                            "Access-Control-Max-Age" "3600"})
+                        origin
+                        (origin-allowed? origin allowed-origins))
+                 ;; Origin is allowed, add CORS headers to response
+                 (update-in context [:response :headers] merge
+                            {"Access-Control-Allow-Origin" origin
+                             "Access-Control-Allow-Credentials" "true"
+                             "Access-Control-Allow-Methods" "GET, POST, PUT, DELETE, OPTIONS"
+                             "Access-Control-Allow-Headers" "Content-Type, Authorization"
+                             "Access-Control-Max-Age" "3600"})
                  ;; Origin not allowed or CORS disabled
                  context)))}))
 
@@ -59,8 +59,11 @@
     :leave (fn [context]
              (let [environment (get-in config/config [:environment])
                    is-production (= environment :production)
-                   csp-policy (or (config/get-env "CSP_POLICY")
-                                 "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self'")
+                   default-csp (if is-production
+                                 "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self'"
+                                 ;; Dev mode needs unsafe-eval (shadow-cljs evalLoad) and ws: (hot-reload)
+                                 "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' ws: wss:")
+                   csp-policy (or (config/get-env "CSP_POLICY") default-csp)
                    headers {"X-Content-Type-Options" "nosniff"
                             "X-Frame-Options" "DENY"
                             "X-XSS-Protection" "1; mode=block"
@@ -172,7 +175,7 @@
                context))
     :leave (fn [context]
              (let [status (get-in context [:response :status])]
-               (when (>= status 400)
+               (when (and status (>= status 400))
                  (log/warn "HTTP Error Response"
                           :status status
                           :uri (get-in context [:request :uri])))

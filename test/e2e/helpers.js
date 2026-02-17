@@ -9,13 +9,18 @@
  * @param {import('@playwright/test').Page} page
  */
 async function waitForAppReady(page) {
-  // Wait for Re-frame to be defined
-  await page.waitForFunction(() => window.re_frame !== undefined);
+  // Wait for #app div to be attached (exists in DOM)
+  await page.waitForSelector('#app', { state: 'attached', timeout: 15000 });
+  // Wait for React to mount content inside #app
+  await page.waitForFunction(
+    () => {
+      const app = document.querySelector('#app');
+      return app && app.children.length > 0;
+    },
+    { timeout: 15000 }
+  );
 
-  // Wait for main app container to be present
-  await page.waitForSelector('#app', { timeout: 10000 });
-
-  // Give it a moment to render initial state
+  // Give it a moment for Re-frame events to process
   await page.waitForTimeout(500);
 }
 
@@ -26,9 +31,13 @@ async function waitForAppReady(page) {
  */
 async function isAuthenticated(page) {
   return page.evaluate(() => {
-    if (!window.re_frame || !window.re_frame.db) return false;
-    const db = window.re_frame.db.app_db.cljs$core$IDeref$_deref$arity$1();
-    return db?.auth?.authenticated === true;
+    try {
+      if (typeof re_frame === 'undefined' || !re_frame.db || !re_frame.db.app_db) return false;
+      const db = cljs.core.deref(re_frame.db.app_db);
+      const auth = cljs.core.get(db, cljs.core.keyword('auth'));
+      const authenticatedKw = cljs.core.keyword('authenticated?');
+      return cljs.core.get(auth, authenticatedKw) === true;
+    } catch(e) { return false; }
   });
 }
 
@@ -39,14 +48,15 @@ async function isAuthenticated(page) {
  */
 async function getSessionState(page) {
   return page.evaluate(() => {
-    if (!window.re_frame || !window.re_frame.db) return null;
-    const db = window.re_frame.db.app_db.cljs$core$IDeref$_deref$arity$1();
-    const state = db?.session?.state;
-    // Convert keyword to string
-    if (state && typeof state === 'object' && state.name) {
-      return state.name;
-    }
-    return state ? String(state) : null;
+    try {
+      if (typeof re_frame === 'undefined' || !re_frame.db || !re_frame.db.app_db) return null;
+      const db = cljs.core.deref(re_frame.db.app_db);
+      const session = cljs.core.get(db, cljs.core.keyword('session'));
+      const state = cljs.core.get(session, cljs.core.keyword('state'));
+      if (state && state.fqn) return state.fqn;
+      if (state && state.name) return state.name;
+      return state ? String(state) : null;
+    } catch(e) { return null; }
   });
 }
 
@@ -57,9 +67,12 @@ async function getSessionState(page) {
  */
 async function getScrobbleCount(page) {
   return page.evaluate(() => {
-    if (!window.re_frame || !window.re_frame.db) return 0;
-    const db = window.re_frame.db.app_db.cljs$core$IDeref$_deref$arity$1();
-    return db?.session?.scrobble_count || 0;
+    try {
+      if (typeof re_frame === 'undefined' || !re_frame.db || !re_frame.db.app_db) return 0;
+      const db = cljs.core.deref(re_frame.db.app_db);
+      const session = cljs.core.get(db, cljs.core.keyword('session'));
+      return cljs.core.get(session, cljs.core.keyword('scrobble-count')) || 0;
+    } catch(e) { return 0; }
   });
 }
 
@@ -70,9 +83,13 @@ async function getScrobbleCount(page) {
  */
 async function getRecentScrobbles(page) {
   return page.evaluate(() => {
-    if (!window.re_frame || !window.re_frame.db) return [];
-    const db = window.re_frame.db.app_db.cljs$core$IDeref$_deref$arity$1();
-    return db?.session?.recent_scrobbles || [];
+    try {
+      if (typeof re_frame === 'undefined' || !re_frame.db || !re_frame.db.app_db) return [];
+      const db = cljs.core.deref(re_frame.db.app_db);
+      const session = cljs.core.get(db, cljs.core.keyword('session'));
+      const scrobbles = cljs.core.get(session, cljs.core.keyword('recent-scrobbles'));
+      return scrobbles ? cljs.core.clj__GT_js(scrobbles) : [];
+    } catch(e) { return []; }
   });
 }
 
@@ -83,9 +100,12 @@ async function getRecentScrobbles(page) {
  */
 async function getErrorMessage(page) {
   return page.evaluate(() => {
-    if (!window.re_frame || !window.re_frame.db) return null;
-    const db = window.re_frame.db.app_db.cljs$core$IDeref$_deref$arity$1();
-    return db?.ui?.error || null;
+    try {
+      if (typeof re_frame === 'undefined' || !re_frame.db || !re_frame.db.app_db) return null;
+      const db = cljs.core.deref(re_frame.db.app_db);
+      const ui = cljs.core.get(db, cljs.core.keyword('ui'));
+      return cljs.core.get(ui, cljs.core.keyword('error')) || null;
+    } catch(e) { return null; }
   });
 }
 
@@ -103,19 +123,21 @@ async function getErrorMessage(page) {
  * @returns {Promise<void>}
  */
 async function mockLastFmAuth(page, username = 'testuser') {
-  // Click login button
+  // Listen for the auth callback request completing (full redirect chain)
+  const callbackComplete = page.waitForResponse(
+    resp => resp.url().includes('/api/auth/callback') && resp.status() === 302,
+    { timeout: 20000 }
+  );
+
+  // Click login button (triggers /api/auth/init -> redirect to mock -> redirect to callback)
   const loginButton = page.getByRole('button', { name: /login with last\.fm/i });
-
-  // Start waiting for navigation before clicking
-  const responsePromise = page.waitForURL(/\//, { timeout: 10000 });
-
   await loginButton.click();
 
-  // Wait for OAuth flow to complete (includes redirect to callback and back)
-  await responsePromise;
+  // Wait for callback to complete
+  await callbackComplete;
 
-  // Wait for app to process authentication
-  await page.waitForTimeout(1000);
+  // Wait for Re-frame to process the auth state after redirect back to /
+  await page.waitForTimeout(1500);
 
   // Verify authentication succeeded
   const authenticated = await isAuthenticated(page);

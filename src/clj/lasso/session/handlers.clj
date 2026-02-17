@@ -57,9 +57,13 @@
                    {:state (name (:state following))
                     :target_username (:target-username following)
                     :scrobble_count (:scrobble-count following)}))
-                (http/error-response (:error result)
-                                    :status 400
-                                    :error-code "START_SESSION_FAILED")))))))
+                (let [err (:error result)
+                      error-code (if (re-find #"(?i)not found|doesn.t exist|invalid.*user" (str err))
+                                   "INVALID_TARGET_USERNAME"
+                                   "START_SESSION_FAILED")]
+                  (http/error-response err
+                                      :status 400
+                                      :error-code error-code))))))))
     (catch Exception e
       (log/error e "Error in start-session-handler")
       (http/error-response "Failed to start session"

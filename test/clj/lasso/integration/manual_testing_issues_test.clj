@@ -207,7 +207,7 @@
             body (parse-json-body response)]
         (is (= 401 (:status response)))
         (is (= "Authentication failed" (:error body)))
-        (is (= "OAUTH_SESSION_FAILED" (:error-code body)))))))
+        (is (= "OAUTH_SESSION_FAILED" (:error_code body)))))))
 
 ;;; ============================================================================
 ;;; Issue #7: Cookie Parsing
