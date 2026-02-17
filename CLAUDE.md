@@ -491,7 +491,7 @@ gcloud run deploy lasso --image gcr.io/PROJECT_ID/lasso --platform managed --reg
 
 ## Current Project Status
 
-**Current Sprint**: Sprint 5-6 (Frontend Development - Not Started)
+**Current Sprint**: Sprint 8 (Deployment Preparation - Not Started)
 
 **Completed:**
 - ✅ **Sprint 2**: Development environment and project scaffolding
@@ -525,18 +525,40 @@ gcloud run deploy lasso --image gcr.io/PROJECT_ID/lasso --platform managed --reg
   - Fixed 7 critical bugs discovered during E2E testing
   - Complete end-to-end functionality verified
 
-**Version:** v0.2.0 (Released 2026-02-12)
+- ✅ **Sprint 5-6**: Complete Frontend Implementation (Released v0.3.0 on 2026-02-13)
+  - Full Re-frame architecture (db, events, subscriptions)
+  - Complete API client for backend communication
+  - Authentication UI (Last.fm OAuth login/logout)
+  - Session controls (start, pause, resume, stop)
+  - Activity feed with real-time polling
+  - Error handling and loading states
+  - Tailwind CSS styling and responsive design
+  - Hot module reload with shadow-cljs
+  - Development environment with `bb dev` (parallel processes)
+  - Fixed 6 critical bugs discovered during E2E testing
+  - Complete full-stack application functional
+
+- ✅ **Sprint 7**: Integration Testing & Polish (v0.4.0 on develop, 2026-02-13)
+  - ClojureScript testing infrastructure (shadow-cljs :node-test)
+  - Frontend unit tests (66 tests: 32 events, 21 subs, 13 components)
+  - Backend integration tests (90 tests, including 15 edge case tests)
+  - E2E testing with Playwright (7 passing, 15 skipped pending auth mocking)
+  - Test coverage reporting with cloverage (79.53% forms, 91.01% lines)
+  - CI/CD integration with test execution and coverage upload
+  - Comprehensive testing documentation (2,502 lines across 5 guides)
+  - Fixed 5 bugs (Babashka, subscriptions, components, CI)
+  - Total: 163 tests, 679 assertions, 100% passing
+
+**Version:** v0.4.0 (Sprint 7 complete, on develop branch)
 
 **Branching Model:**
-- **`main`**: Production releases only (currently v0.2.0)
-- **`develop`**: Active development (synced with main at v0.2.0)
+- **`main`**: Production releases only (currently v0.3.0)
+- **`develop`**: Active development (v0.4.0 - Sprint 7 merged)
 - **Feature branches**: Created from and merged to `develop`
 - **Release branches**: Created from `develop`, merged to `main` (triggers automated release)
 
 **Next Phases:**
-- Sprint 5-6: Frontend development (UI, session controls, activity feed) - NEXT
-- Sprint 7: Integration & testing
-- Sprint 8: Deployment
+- Sprint 8: Deployment preparation (E2E auth mocking, Cloud Run setup) - NEXT
 - Sprint 9: Launch
 
 ## Common Patterns

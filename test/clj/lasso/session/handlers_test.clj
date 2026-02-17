@@ -51,7 +51,7 @@
           body (parse-json-body response)]
       (is (= 400 (:status response)))
       (is (= "Missing target_username" (:error body)))
-      (is (= "MISSING_TARGET_USERNAME" (:error-code body)))))
+      (is (= "MISSING_TARGET_USERNAME" (:error_code body)))))
 
   (testing "fail when target user doesn't exist"
     (with-redefs [lastfm/api-request (fn [_] {:error "User not found"})]
@@ -61,7 +61,7 @@
             body (parse-json-body response)]
         (is (= 400 (:status response)))
         (is (string? (:error body)))
-        (is (= "START_SESSION_FAILED" (:error-code body))))))
+        (is (= "INVALID_TARGET_USERNAME" (:error_code body))))))
 
   (testing "handles exceptions gracefully"
     (with-redefs [manager/start-session (fn [_ _] (throw (Exception. "Database error")))]
@@ -71,7 +71,7 @@
             body (parse-json-body response)]
         (is (= 500 (:status response)))
         (is (= "Failed to start session" (:error body)))
-        (is (= "START_SESSION_ERROR" (:error-code body)))))))
+        (is (= "START_SESSION_ERROR" (:error_code body)))))))
 
 ;; Tests for pause-session-handler
 (deftest pause-session-handler-test
@@ -94,7 +94,7 @@
           body (parse-json-body response)]
       (is (= 400 (:status response)))
       (is (string? (:error body)))
-      (is (= "PAUSE_SESSION_FAILED" (:error-code body)))))
+      (is (= "PAUSE_SESSION_FAILED" (:error_code body)))))
 
   (testing "handles exceptions gracefully"
     (with-redefs [manager/pause-session (fn [_] (throw (Exception. "Error")))]
@@ -104,7 +104,7 @@
             body (parse-json-body response)]
         (is (= 500 (:status response)))
         (is (= "Failed to pause session" (:error body)))
-        (is (= "PAUSE_SESSION_ERROR" (:error-code body)))))))
+        (is (= "PAUSE_SESSION_ERROR" (:error_code body)))))))
 
 ;; Tests for resume-session-handler
 (deftest resume-session-handler-test
@@ -130,7 +130,7 @@
             body (parse-json-body response)]
         (is (= 400 (:status response)))
         (is (string? (:error body)))
-        (is (= "RESUME_SESSION_FAILED" (:error-code body))))))
+        (is (= "RESUME_SESSION_FAILED" (:error_code body))))))
 
   (testing "handles exceptions gracefully"
     (with-redefs [manager/resume-session (fn [_] (throw (Exception. "Error")))]
@@ -140,7 +140,7 @@
             body (parse-json-body response)]
         (is (= 500 (:status response)))
         (is (= "Failed to resume session" (:error body)))
-        (is (= "RESUME_SESSION_ERROR" (:error-code body)))))))
+        (is (= "RESUME_SESSION_ERROR" (:error_code body)))))))
 
 ;; Tests for stop-session-handler
 (deftest stop-session-handler-test
@@ -173,7 +173,7 @@
             body (parse-json-body response)]
         (is (= 500 (:status response)))
         (is (= "Failed to stop session" (:error body)))
-        (is (= "STOP_SESSION_ERROR" (:error-code body)))))))
+        (is (= "STOP_SESSION_ERROR" (:error_code body)))))))
 
 ;; Tests for status-handler
 (deftest status-handler-test
@@ -209,4 +209,4 @@
             body (parse-json-body response)]
         (is (= 500 (:status response)))
         (is (= "Failed to get session status" (:error body)))
-        (is (= "STATUS_ERROR" (:error-code body)))))))
+        (is (= "STATUS_ERROR" (:error_code body)))))))

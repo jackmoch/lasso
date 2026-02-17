@@ -52,7 +52,7 @@
       (is (some? response))
       (is (= 401 (:status response)))
       (is (= "Authentication required" (:error body)))
-      (is (= "AUTH_REQUIRED" (:error-code body)))))
+      (is (= "AUTH_REQUIRED" (:error_code body)))))
 
   (testing "rejects request with invalid session ID"
     (let [request (make-request :session-id "invalid-session-id")
@@ -64,7 +64,7 @@
       (is (some? response))
       (is (= 401 (:status response)))
       (is (= "Session not found or expired" (:error body)))
-      (is (= "SESSION_EXPIRED" (:error-code body)))))
+      (is (= "SESSION_EXPIRED" (:error_code body)))))
 
   (testing "rejects request with expired session"
     (let [{:keys [session-id]} (auth-session/create-session "testuser" "session-key")

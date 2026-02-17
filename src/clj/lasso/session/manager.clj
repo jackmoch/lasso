@@ -17,7 +17,7 @@
         {:valid? true
          :username (:name user-info)}
         {:valid? false
-         :error (or (:error result) "User not found")}))
+         :error (or (:message result) (str (:error result)) "User not found")}))
     (catch Exception e
       (log/error e "Error validating target user" {:username target-username})
       {:valid? false

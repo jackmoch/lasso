@@ -62,37 +62,39 @@
 (deftest identify-new-tracks-test
   (testing "identifies new tracks not in cache and after session start"
     (let [session-start (System/currentTimeMillis)
+          session-start-sec (quot session-start 1000)
           tracks [{:artist {:#text "Artist 1"}
                   :name "Track 1"
-                  :date {:uts (str (quot session-start 1000))}}
+                  :date {:uts (str session-start-sec)}}
                  {:artist {:#text "Artist 2"}
                   :name "Track 2"
-                  :date {:uts (str (+ (quot session-start 1000) 10))}}]
-          cache #{"Artist 1|Track 1|" (str (quot session-start 1000))}
+                  :date {:uts (str (+ session-start-sec 10))}}]
+          cache #{(str "Artist 1|Track 1|" session-start-sec)}
           new-tracks (engine/identify-new-tracks tracks cache session-start)]
       (is (= 1 (count new-tracks)))
       (is (= "Artist 2" (:artist (first new-tracks))))))
 
   (testing "returns empty when all tracks are cached"
     (let [session-start (System/currentTimeMillis)
+          session-start-sec (quot session-start 1000)
           tracks [{:artist {:#text "Artist 1"}
                   :name "Track 1"
-                  :date {:uts (str (quot session-start 1000))}}]
-          cache #{"Artist 1|Track 1|" (str (quot session-start 1000))}
+                  :date {:uts (str session-start-sec)}}]
+          cache #{(str "Artist 1|Track 1|" session-start-sec)}
           new-tracks (engine/identify-new-tracks tracks cache session-start)]
       (is (empty? new-tracks))))
 
-  (testing "filters out tracks before session start (minus 5min buffer)"
+  (testing "filters out tracks before session start (no lookback buffer)"
     (let [session-start (System/currentTimeMillis)
           session-start-sec (quot session-start 1000)
           ;; Track from 10 minutes before session start (should be filtered out)
           old-track {:artist {:#text "Old Artist"}
                     :name "Old Track"
                     :date {:uts (str (- session-start-sec (* 10 60)))}}
-          ;; Track from 2 minutes before session start (within 5min buffer, should be included)
+          ;; Track from AFTER session start (should be included)
           recent-track {:artist {:#text "Recent Artist"}
                        :name "Recent Track"
-                       :date {:uts (str (- session-start-sec (* 2 60)))}}
+                       :date {:uts (str (+ session-start-sec 10))}}
           tracks [old-track recent-track]
           cache #{}
           new-tracks (engine/identify-new-tracks tracks cache session-start)]
@@ -126,7 +128,9 @@
                                                   :scrobble-count 0
                                                   :scrobble-cache #{}})))
           new-cache #{"track1" "track2"}
-          updated (engine/update-session-after-poll session-id 2 new-cache)]
+          new-tracks [{:artist "Artist 1" :track "Track 1" :timestamp 100}
+                      {:artist "Artist 2" :track "Track 2" :timestamp 200}]
+          updated (engine/update-session-after-poll session-id 2 new-cache new-tracks)]
       (is (= 2 (get-in updated [:following-session :scrobble-count])))
       (is (= new-cache (get-in updated [:following-session :scrobble-cache])))
       (is (number? (get-in updated [:following-session :last-poll])))))
@@ -140,7 +144,8 @@
                                                   :target-username "targetuser"
                                                   :scrobble-count 5
                                                   :scrobble-cache #{}})))
-          updated (engine/update-session-after-poll session-id 3 #{"new-track"})]
+          new-tracks [{:artist "New Artist" :track "New Track" :timestamp 300}]
+          updated (engine/update-session-after-poll session-id 3 #{"new-track"} new-tracks)]
       (is (= 8 (get-in updated [:following-session :scrobble-count]))))))
 
 ;; Test for poll-and-scrobble

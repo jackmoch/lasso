@@ -6,7 +6,11 @@
             [lasso.util.crypto :as crypto]
             [taoensso.timbre :as log]))
 
-(def api-base "https://ws.audioscrobbler.com/2.0/")
+(defn api-base
+  "Get Last.fm API base URL from config.
+   Allows override for testing with mock server."
+  []
+  (str (get-in config/config [:lastfm :api-base-url]) "/2.0/"))
 
 (def ^:private last-request-time (atom 0))
 (def ^:private min-interval-ms 200) ; 5 req/sec = 200ms between requests
@@ -56,10 +60,14 @@
             request-params (if signed
                             {:form-params final-params
                              :content-type :x-www-form-urlencoded
-                             :as :json}
+                             :as :json
+                             :coerce :always
+                             :throw-exceptions false}
                             {:query-params final-params
-                             :as :json})
-            response (http-method api-base request-params)
+                             :as :json
+                             :coerce :always
+                             :throw-exceptions false})
+            response (http-method (api-base) request-params)
             body (:body response)]
         (log/debug "Last.fm API response:" (pr-str body))
         (if (contains? body :error)

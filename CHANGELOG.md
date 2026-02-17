@@ -7,6 +7,70 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-02-17
+
+### Added - E2E Testing Infrastructure (Sprint 8)
+- **Mock Last.fm server** for E2E testing without real credentials (`test/e2e/mocks/lastfm-mock-server.js`)
+- **Full E2E test suite** with 25 passing tests (auth, session management, error handling)
+- **Playwright E2E tests** covering complete authentication and scrobble-following workflows
+- **express** package for mock server implementation
+
+### Added - Deployment Infrastructure (Sprint 8)
+- **Google Cloud Run deployment** workflows for dev/staging/prod environments
+- **Production security middleware** (`src/clj/lasso/middleware/security.clj`) with:
+  - CORS interceptor with configurable origins
+  - Security headers (X-Frame-Options, X-Content-Type-Options, Referrer-Policy, CSP)
+  - Rate limiting with configurable requests per minute
+  - Request logging with timing
+- **SPA routing support** via custom `spa-not-found-interceptor` in server.clj
+- **Unified CI/CD pipeline** with sequential gated stages (lint → test → build → deploy)
+- **IAM binding configuration** for unauthenticated Cloud Run access
+- **Deployment documentation** (`docs/deployment/`)
+- **Sprint 8 summary** (`docs/sprints/sprint-8-summary.md`)
+
+### Added - Integration Testing (Sprint 7)
+- **ClojureScript test infrastructure** with shadow-cljs `:node-test` target
+- **Frontend unit tests** (66 tests, 197 assertions):
+  - 32 event handler tests in `events_test.cljs`
+  - 21 subscription tests in `subs_test.cljs`
+  - 13 component tests in `components_test.cljs`
+- **Backend edge case tests** (15 tests for concurrent updates, network errors, data integrity)
+- **Test coverage reporting** with cloverage (79.53% forms, 91.01% lines)
+- **CI/CD test execution** with coverage artifact upload
+- **Comprehensive testing documentation** (5 guides, 2,502 lines total):
+  - `docs/testing/README.md` - Quick start guide
+  - `docs/testing/TESTING_GUIDE.md` - Comprehensive guide
+  - `docs/testing/E2E_TESTING.md` - E2E Playwright guide
+  - `docs/testing/TROUBLESHOOTING.md` - Common issues guide
+  - `docs/testing/COVERAGE.md` - Coverage improvement guide
+
+### Fixed - E2E Test Reliability (Sprint 8)
+- **SPA 404 handling**: Unknown non-API routes now serve `index.html` (Pedestal `::http/not-found-interceptor`)
+- **Invalid username error display**: Frontend now shows specific `INVALID_TARGET_USERNAME` error code
+- **clj-http error bodies**: Added `:throw-exceptions false` and `:coerce :always` for proper 4xx JSON parsing
+- **error_code format**: Changed from hyphen (`error-code`) to underscore (`error_code`) for JSON consistency
+- **Request logging crash**: Fixed nil status NPE in `request-logging-interceptor` for unmatched routes
+- **CORS headers**: Moved to `:leave` phase to apply on all responses including errors
+- **CSP policy**: Environment-aware (relaxed in dev for shadow-cljs, strict in prod)
+- **waitForResponse timeout**: Increased E2E test timeout to 20s for reliability
+- **Rate limiting**: Added `RATE_LIMIT_MAX_REQUESTS=500` env var to prevent test suite throttling
+- **validate-target-user**: Uses `:message` from API response instead of integer error code
+
+### Fixed - Backend Test Alignment (Sprint 8)
+- All backend tests updated to use `(:error_code body)` (underscore) instead of `(:error-code body)`
+- Test expectation updated: invalid username now returns `INVALID_TARGET_USERNAME` (not `START_SESSION_FAILED`)
+
+### Fixed - Sprint 7 Bug Fixes
+- **Babashka tasks**: Fixed `&&` operator in shell commands for compatibility
+- **CI pipeline**: Changed `clj` to `clojure` command to fix rlwrap issue
+- **Subscriptions**: Fixed Re-frame subscription handling in component tests
+
+### Infrastructure
+- Total test count: 25 E2E + 90 backend + 66 frontend = 181 tests, 100% passing
+- CI/CD unified into sequential gated pipeline with deployment stages
+- Docker multi-stage build with proper frontend asset copying
+- Production-ready security headers and CORS configuration
+
 ## [0.3.0] - 2026-02-12
 
 ### Added - Frontend Implementation (Sprint 5-6)

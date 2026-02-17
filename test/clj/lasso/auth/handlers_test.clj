@@ -57,7 +57,7 @@
             body (parse-json-body response)]
         (is (= 500 (:status response)))
         (is (= "Authentication initialization failed" (:error body)))
-        (is (= "OAUTH_INIT_ERROR" (:error-code body)))))))
+        (is (= "OAUTH_INIT_ERROR" (:error_code body)))))))
 
 ;; Tests for auth-callback-handler
 (deftest auth-callback-handler-test
@@ -85,7 +85,7 @@
           body (parse-json-body response)]
       (is (= 400 (:status response)))
       (is (= "Missing token parameter" (:error body)))
-      (is (= "MISSING_TOKEN" (:error-code body)))))
+      (is (= "MISSING_TOKEN" (:error_code body)))))
 
   (testing "OAuth session exchange fails"
     (with-redefs [oauth/get-session-key (fn [_] {:error "INVALID_TOKEN"})]
@@ -94,7 +94,7 @@
             body (parse-json-body response)]
         (is (= 401 (:status response)))
         (is (= "Authentication failed" (:error body)))
-        (is (= "OAUTH_SESSION_FAILED" (:error-code body))))))
+        (is (= "OAUTH_SESSION_FAILED" (:error_code body))))))
 
   (testing "handles exceptions gracefully"
     (with-redefs [oauth/get-session-key (fn [_] (throw (Exception. "Network error")))]
@@ -103,7 +103,7 @@
             body (parse-json-body response)]
         (is (= 500 (:status response)))
         (is (= "Authentication callback failed" (:error body)))
-        (is (= "OAUTH_CALLBACK_ERROR" (:error-code body)))))))
+        (is (= "OAUTH_CALLBACK_ERROR" (:error_code body)))))))
 
 ;; Tests for logout-handler
 (deftest logout-handler-test
@@ -128,4 +128,4 @@
             body (parse-json-body response)]
         (is (= 500 (:status response)))
         (is (= "Logout failed" (:error body)))
-        (is (= "LOGOUT_ERROR" (:error-code body)))))))
+        (is (= "LOGOUT_ERROR" (:error_code body)))))))

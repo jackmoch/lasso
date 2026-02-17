@@ -38,6 +38,8 @@
             :port (Integer/parseInt (get-env "PORT" "8080"))}
    :lastfm {:api-key (get-env "LASTFM_API_KEY")
             :api-secret (get-env "LASTFM_API_SECRET")
+            :api-base-url (get-env "LASTFM_API_BASE_URL" "https://ws.audioscrobbler.com")
+            :auth-url (get-env "LASTFM_AUTH_URL" "https://www.last.fm")
             :callback-url (get-env "OAUTH_CALLBACK_URL" "http://localhost:8080/api/auth/callback")}
    :session {:secret (get-env "SESSION_SECRET" "development-secret-change-in-production")}
    :polling {:interval-ms (Integer/parseInt (get-env "POLLING_INTERVAL_MS" "20000"))}

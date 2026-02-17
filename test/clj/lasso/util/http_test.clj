@@ -93,7 +93,7 @@
                                        :error-code "VALIDATION_ERROR")
           body (json/read-str (:body response) :key-fn keyword)]
       (is (= "Invalid input" (:error body)))
-      (is (= "VALIDATION_ERROR" (:error-code body)))))
+      (is (= "VALIDATION_ERROR" (:error_code body)))))
 
   (testing "Error response with details"
     (let [response (http/error-response "Validation failed"

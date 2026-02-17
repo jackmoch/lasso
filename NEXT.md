@@ -1,6 +1,6 @@
 # What to Work On Next
 
-**Last Updated:** 2026-02-12 (Evening Session)
+**Last Updated:** 2026-02-13 (Post v0.4.0 - Sprint 7 Complete)
 
 This file tells you exactly what to work on next. When you finish a task, update this file and commit it.
 
@@ -8,203 +8,196 @@ This file tells you exactly what to work on next. When you finish a task, update
 
 ## Immediate Next Task
 
-### 🎯 Sprint 5-6: E2E Testing & Verification
+### 🎯 Sprint 8: Deployment Preparation
 
-**Goal:** Test the complete application end-to-end and verify all functionality works
+**Goal:** Prepare application for production deployment on Google Cloud Run
 
 **Current Status:**
-- ✅ Backend v0.2.0 fully functional (OAuth, sessions, scrobble tracking, polling)
-- ✅ Frontend 100% implemented (Re-frame, components, styling)
-- ✅ OAuth web flow bug fixed (callback redirect working)
-- ✅ Timestamp filtering bug fixed (5min lookback, no old scrobbles)
-- ✅ All tests passing (75 backend + 7 polling = 82 tests total)
-- 🎯 Ready for manual E2E testing
+- ✅ Sprint 7 complete (163 tests, comprehensive documentation)
+- ✅ Backend v0.2.0 fully functional
+- ✅ Frontend v0.3.0 fully functional
+- ✅ Testing infrastructure in place (79.53% coverage)
+- ⚠️ 15 E2E tests skipped (require auth mocking)
+- 🎯 Ready for deployment preparation
 
-**Branch:** `feature/sprint-5-6-frontend-wip`
+**Branch:** Create `feature/sprint-8-deployment` from `develop`
 
-**Frontend Files (All Implemented ✅):**
-- `src/cljs/lasso/core.cljs` - App initialization
-- `src/cljs/lasso/db.cljs` - App state schema
-- `src/cljs/lasso/events.cljs` - Re-frame events (auth, session, polling, UI)
-- `src/cljs/lasso/subs.cljs` - Re-frame subscriptions
-- `src/cljs/lasso/api.cljs` - Backend API client
-- `src/cljs/lasso/views.cljs` - Main layout with navbar
-- `src/cljs/lasso/components/auth.cljs` - Login/logout UI
-- `src/cljs/lasso/components/session_controls.cljs` - Session controls
-- `src/cljs/lasso/components/activity_feed.cljs` - Real-time scrobble feed
-- `src/cljs/lasso/components/error.cljs` - Error display
+---
 
-**What to Test:**
+## Sprint 8 Tasks
 
-1. **Authentication Flow**
-   - ✅ Login button redirects to Last.fm
-   - ✅ OAuth callback redirects back to app
-   - ✅ User info displays after login
-   - ✅ Logout clears session
-   - ✅ Session persists on page reload
+### Phase 1: E2E Test Completion (Priority)
 
-2. **Session Controls**
-   - ✅ Can enter target Last.fm username
-   - ✅ Start button creates active session
-   - ✅ Pause button pauses polling
-   - ✅ Resume button resumes polling
-   - ✅ Stop button (with confirmation) clears session
+**Goal:** Complete E2E test suite by implementing auth mocking
 
-3. **Scrobble Tracking**
-   - ✅ Only scrobbles tracks AFTER session starts
-   - ✅ 5-minute lookback buffer works
-   - ✅ No old scrobbles backfilled
-   - ✅ Real-time updates every 5 seconds
-   - ✅ Scrobble count increments correctly
+**Tasks:**
+1. **Auth Mocking Infrastructure**
+   - [ ] Create mock OAuth server for E2E tests
+   - [ ] Mock Last.fm API endpoints for testing
+   - [ ] Enable 15 skipped E2E tests
+   - [ ] Verify all E2E flows pass with mocked auth
 
-4. **UI/UX**
-   - ✅ Responsive design
-   - ✅ Loading states during operations
-   - ✅ Error messages display properly
-   - ✅ Dismissable error banner
-
-**Dependencies Already Available:**
-- ✅ Backend API fully functional at `http://localhost:8080/api/*`
-- ✅ OAuth flow: `/api/auth/init`, `/api/auth/callback`, `/api/auth/logout`
-- ✅ Session management: `/api/session/start|pause|resume|stop|status`
-- ✅ shadow-cljs build configuration
-- ✅ Tailwind CSS pipeline
-- ✅ Reagent and Re-frame dependencies
-
-**Testing:**
-- Manual E2E testing with real Last.fm accounts
-- Test all session state transitions
-- Test error handling (invalid username, network errors)
-- Mobile responsiveness testing
-- Cross-browser compatibility
-
-**Testing Steps:**
-
-1. **Start the application:**
-   ```bash
-   # Terminal 1: Backend
-   clj -M:dev:repl
-   # In REPL: (user/start)
-
-   # Terminal 2: Frontend
-   npx shadow-cljs watch app
-
-   # Open: http://localhost:8080
-   ```
-
-2. **Test OAuth Flow:**
-   - Click "Login with Last.fm"
-   - Authorize on Last.fm
-   - Verify redirect back to app works
-   - Verify user info displays
-
-3. **Test Session Flow:**
-   - Enter a target Last.fm username (someone actively listening)
-   - Click "Start Following"
-   - Verify session starts
-   - Wait for target to scrobble a track
-   - Verify only NEW scrobbles appear (not old ones)
-   - Test pause/resume
-   - Test stop with confirmation
-
-4. **Verify Bug Fixes:**
-   - ✅ OAuth callback redirects properly (not stuck on Last.fm)
-   - ✅ Only tracks after session start are scrobbled
-   - ✅ 5-minute lookback buffer works for recent tracks
+2. **E2E Coverage Expansion**
+   - [ ] Add more error scenario tests
+   - [ ] Add mobile viewport E2E tests
+   - [ ] Add network failure simulation tests
 
 **Acceptance Criteria:**
-- [ ] Complete OAuth flow works in browser
-- [ ] Can start/pause/resume/stop sessions
-- [ ] Real-time scrobble feed displays updates
-- [ ] Only new scrobbles tracked (no old backfill)
-- [ ] All error states handled gracefully
-- [ ] Frontend connects successfully to backend
-- [ ] App usable for basic scrobble tracking workflow
+- All 22 E2E tests passing (0 skipped)
+- Auth flow fully tested without real credentials
+- E2E tests run reliably in CI
 
-**Estimated Time:** 1-2 hours manual testing
-
-**Reference:**
-- Backend API: All routes implemented and tested
-- Re-frame tutorial: https://day8.github.io/re-frame/
-- Reagent docs: https://reagent-project.github.io/
-- Existing skeleton: `src/cljs/lasso/core.cljs` and `views.cljs`
+**Priority:** HIGH - Required before production deployment
 
 ---
 
-## After That (Queued Tasks)
+### Phase 2: Production Environment Configuration
 
-### 2️⃣ Sprint 7: Integration & Testing
+**Goal:** Set up production-ready infrastructure
 
-**After frontend is functional:**
-- End-to-end testing with real Last.fm accounts
-- Error handling improvements
-- Performance optimization
-- User experience polish
-- Bug fixes discovered during testing
+**Tasks:**
+1. **Environment Configuration**
+   - [ ] Create production environment variables
+   - [ ] Set up Google Cloud Run project
+   - [ ] Configure OAuth callback URLs for production
+   - [ ] Set up SSL/HTTPS certificates
 
----
+2. **Build Optimization**
+   - [ ] Minimize frontend bundle size
+   - [ ] Enable production optimizations in shadow-cljs
+   - [ ] Configure CDN for static assets (if needed)
+   - [ ] Test production build locally
 
-### 3️⃣ Sprint 8: Deployment Preparation
+3. **Security Hardening**
+   - [ ] Review session security settings
+   - [ ] Configure CORS policies
+   - [ ] Set up rate limiting
+   - [ ] Security audit of environment variables
 
-**Files:** Docker, CI/CD, deployment configs
-
-Tasks:
-- Production build optimization
-- Docker image finalization
-- Google Cloud Run configuration
-- Environment variable management
-- Monitoring and logging setup
-
----
-
-### 4️⃣ Sprint 9: Launch
-
-**Final steps before public release:**
-- Production deployment to GCP
-- Domain setup and SSL
-- User documentation
-- Announcement and marketing
+**Acceptance Criteria:**
+- Production build completes successfully
+- All security best practices implemented
+- Environment variables properly configured
 
 ---
 
-## Backlog (Future)
+### Phase 3: Deployment & Monitoring
 
-- [ ] Deploy to Google Cloud Run
-- [ ] Migrate sessions from atoms to Redis
-- [ ] Add monitoring and logging
-- [ ] Performance optimization
-- [ ] Mobile app consideration
+**Goal:** Deploy to Google Cloud Run and set up monitoring
+
+**Tasks:**
+1. **Initial Deployment**
+   - [ ] Deploy to Google Cloud Run staging environment
+   - [ ] Configure health checks
+   - [ ] Test with real Last.fm API
+   - [ ] Smoke test all functionality
+
+2. **Monitoring & Logging**
+   - [ ] Set up Google Cloud Logging
+   - [ ] Configure error tracking (Sentry or similar)
+   - [ ] Set up uptime monitoring
+   - [ ] Create alerting rules
+
+3. **Documentation**
+   - [ ] Deployment runbook
+   - [ ] Rollback procedures
+   - [ ] Incident response guide
+   - [ ] User guide for non-technical users
+
+**Acceptance Criteria:**
+- Application runs successfully on Cloud Run
+- Monitoring and logging operational
+- Documentation complete
 
 ---
 
-## When You Finish a Task
+## Deferred Tasks
 
-1. **Update this file** - Move completed task to STATUS.md
-2. **Commit your changes** - Follow conventional commits
-3. **Create PR to `develop`** - Use `./scripts/wait-for-ci.sh <pr-number>`
-4. **Update STATUS.md** - Mark task as complete
-5. **Commit NEXT.md + STATUS.md** together
+These features can be tackled post-launch:
+
+- **Manual Backfill Feature**
+  - Allow users to manually select recent scrobbles to backfill
+  - Show preview of target user's last 10 scrobbles before starting session
+  - **Defer to post-launch enhancement**
+
+- **Enhanced Error Messages**
+  - Better messaging for invalid/non-existent usernames
+  - API-specific error explanations with recovery suggestions
+
+- **Scrobble Deduplication Documentation**
+  - Create technical doc explaining how consecutive plays work
+  - Add to `docs/technical/`
+
+- **Mobile App** (Far future)
+  - Native iOS/Android apps
+  - Push notifications for new scrobbles
 
 ---
 
-## Need Help?
+## How to Get Started
 
-- **Architecture questions:** See `CLAUDE.md` § Architecture
-- **Development setup:** See `CLAUDE.md` § Common Commands
-- **Git workflow:** See `CONTRIBUTING.md` § Branching Strategy
-- **Past decisions:** See `MEMORY.md`
-- **Current state:** See `STATUS.md`
+### Starting Sprint 8
+
+```bash
+# 1. Ensure you're on develop with latest changes
+git checkout develop
+git pull origin develop
+
+# 2. Create sprint branch
+git checkout -b feature/sprint-8-deployment
+
+# 3. Start development environment
+bb dev
+
+# 4. Begin Phase 1: E2E Auth Mocking
+# Priority: Enable the 15 skipped E2E tests
+```
+
+### Phase 1 Quick Start: E2E Auth Mocking
+
+**Priority task:** Implement mock OAuth server for E2E tests
+
+**Approach:**
+1. Create mock Last.fm OAuth endpoints (token, session)
+2. Mock API endpoints used in tests (getRecentTracks, getInfo)
+3. Update Playwright config to use mock server
+4. Enable skipped tests and verify they pass
+5. Document mock server setup
+
+**Files to create/modify:**
+- `test/e2e/mocks/lastfm-mock-server.js` - Mock server implementation
+- `test/e2e/setup.js` - Global test setup
+- `playwright.config.js` - Add mock server to global setup
+- `test/e2e/*.spec.js` - Enable skipped tests
 
 ---
 
-## Decision Points
+## Success Criteria for v0.5.0 Release
 
-**If you encounter any of these, consult the user before proceeding:**
+Sprint 8 complete when:
+- ✅ All 22 E2E tests passing (0 skipped)
+- ✅ Production build optimized and tested
+- ✅ Deployed to Google Cloud Run staging
+- ✅ Monitoring and logging operational
+- ✅ Security audit passed
+- ✅ Deployment documentation complete
+- ✅ Ready for production launch
 
-- Changing API contract (routes, request/response format)
-- Adding new dependencies
-- Modifying database schema or session structure
-- Security-related changes (auth flow, encryption)
-- Performance tradeoffs (caching strategy, polling intervals)
+**Expected Timeline:** 1-2 weeks
 
-For routine implementation following the existing patterns, proceed autonomously and create a PR for review.
+**Next Release:** v0.5.0 (Sprint 8 complete, ready for launch)
+
+---
+
+## Questions or Blockers?
+
+If you encounter issues or have questions:
+1. Check `MEMORY.md` for known gotchas
+2. Check `docs/testing/` for testing guides
+3. Check `docs/development/` for dev guides
+4. Review test output for clues
+5. Ask in PR comments or create issue
+
+---
+
+**Remember:** Sprint 8 focuses on production readiness. Priority is completing E2E tests, then ensuring smooth deployment. Take time to get deployment infrastructure right - it's the foundation for a successful launch! 🚀

@@ -1,25 +1,66 @@
 (ns lasso.server
   "Pedestal server lifecycle management for Lasso application."
   (:require [io.pedestal.http :as http]
+            [io.pedestal.http.body-params :as body-params]
+            [io.pedestal.interceptor :refer [interceptor]]
+            [clojure.java.io :as io]
+            [clojure.string :as str]
             [lasso.config :as config]
             [lasso.routes :as routes]
+            [lasso.middleware.security :as security]
             [taoensso.timbre :as log])
   (:gen-class))
 
 (defonce server-instance (atom nil))
 
+(def spa-not-found-interceptor
+  "Serve SPA HTML for non-API routes when no route matches.
+   API routes return 404 JSON."
+  (interceptor
+   {:name ::spa-not-found
+    :leave (fn [context]
+             (if (nil? (get-in context [:response :status]))
+               (let [uri (get-in context [:request :uri])]
+                 (if (str/starts-with? uri "/api/")
+                   (assoc context :response
+                          {:status 404
+                           :headers {"Content-Type" "application/json"}
+                           :body "{\"error\": \"API endpoint not found\"}"})
+                   (assoc context :response
+                          {:status 200
+                           :headers {"Content-Type" "text/html"}
+                           :body (slurp (io/resource "public/index.html"))})))
+               context))}))
+
+
 (defn create-server
-  "Create a Pedestal server configuration."
+  "Create a Pedestal server configuration with security middleware."
   []
-  (let [{:keys [host port]} (:server config/config)]
-    (http/create-server
-     {::http/routes routes/routes
-      ::http/type :jetty
-      ::http/host host
-      ::http/port port
-      ::http/join? false
-      ::http/resource-path "public"
-      ::http/secure-headers {:content-security-policy-settings {:object-src "'none'"}}})))
+  (let [{:keys [host port]} (:server config/config)
+        environment (:environment config/config)]
+    (-> {::http/routes routes/routes
+         ::http/type :jetty
+         ::http/host host
+         ::http/port port
+         ::http/join? false
+         ::http/resource-path "public"
+         ;; Disable default secure headers (we use our own)
+         ::http/secure-headers nil
+         ;; Serve SPA HTML for unknown non-API routes
+         ::http/not-found-interceptor spa-not-found-interceptor
+         ;; Enable session support
+         ::http/enable-session {:cookie-name "lasso-session"
+                               :cookie-attrs {:http-only true
+                                             :secure (= environment :production)
+                                             :same-site :lax}}}
+        ;; Add common interceptors that apply to all routes
+        (http/default-interceptors)
+        (update ::http/interceptors concat
+                [security/cors-interceptor
+                 security/security-headers-interceptor
+                 security/rate-limit-interceptor
+                 security/request-logging-interceptor
+                 (body-params/body-params)]))))
 
 (defn start
   "Start the Pedestal server."

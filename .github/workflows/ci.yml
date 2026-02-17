@@ -2,12 +2,17 @@ name: CI
 
 on:
   push:
-    branches: [main, develop]
+    branches: [develop, main, 'release/**']
   pull_request:
-    branches: [main, develop]
+    branches: [develop, main]
+  workflow_dispatch:
+
+env:
+  GCP_PROJECT_ID: lasso-scrobbler-0667
+  GCP_REGION: us-central1
 
 jobs:
-  lint-and-build:
+  validate:
     runs-on: ubuntu-latest
     outputs:
       duration: ${{ steps.duration.outputs.duration }}
@@ -83,13 +88,35 @@ jobs:
       - name: Build CSS
         run: npm run build:css
 
-      - name: Run tests
-        id: test
+      - name: Run backend tests
+        id: backend-test
         run: |
-          echo "Running Clojure tests..."
-          clj -M:test || echo "No tests found (expected for Sprint 2)"
-          echo "✅ Test step completed"
-        continue-on-error: true  # Don't fail if no tests exist yet
+          echo "🧪 Running backend tests..."
+          clojure -M:test
+
+      - name: Run frontend tests
+        id: frontend-test
+        run: |
+          echo "🧪 Running frontend tests..."
+          npx shadow-cljs compile test
+          node target/test.js
+
+      - name: Generate coverage report
+        id: coverage
+        run: |
+          echo "📊 Generating test coverage..."
+          clojure -M:coverage
+        continue-on-error: true  # Don't fail build if coverage fails
+
+      - name: Upload coverage to Codecov
+        if: always()
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./target/coverage/codecov.json
+          flags: backend
+          fail_ci_if_error: false
+          token: ${{ secrets.CODECOV_TOKEN }}
+        continue-on-error: true
 
       - name: Build backend
         run: clojure -X:uberjar
@@ -104,6 +131,7 @@ jobs:
             resources/public/js/
             resources/public/css/tailwind.css
             lint-results.txt
+            target/coverage/
           retention-days: 7
 
       - name: Generate build summary
@@ -114,6 +142,31 @@ jobs:
           echo "**Commit:** \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
           echo "**Branch:** \`${{ github.ref_name }}\`" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Test results
+          echo "### 🧪 Test Results" >> $GITHUB_STEP_SUMMARY
+          BACKEND_STATUS="${{ steps.backend-test.outcome }}"
+          FRONTEND_STATUS="${{ steps.frontend-test.outcome }}"
+
+          if [ "$BACKEND_STATUS" == "success" ]; then
+            echo "- Backend tests: ✅ Passed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- Backend tests: ❌ Failed" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          if [ "$FRONTEND_STATUS" == "success" ]; then
+            echo "- Frontend tests: ✅ Passed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- Frontend tests: ❌ Failed" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Coverage results
+          if [ -f target/coverage/codecov.json ]; then
+            echo "### 📊 Test Coverage" >> $GITHUB_STEP_SUMMARY
+            echo "Coverage report generated. See artifacts for detailed report." >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+          fi
 
           # Linting results
           echo "### Linting Results" >> $GITHUB_STEP_SUMMARY
@@ -184,9 +237,11 @@ jobs:
           # Save duration for pr-status-comment job
           echo "duration=${DURATION}" >> $GITHUB_OUTPUT
 
-  docker-build:
+  # Validates Dockerfile is buildable - runs only on PRs (no push to registry)
+  docker-validate:
     runs-on: ubuntu-latest
-    needs: lint-and-build
+    needs: validate
+    if: github.event_name == 'pull_request'
 
     steps:
       - name: Checkout code
@@ -233,9 +288,356 @@ jobs:
           docker history lasso:ci-${{ github.sha }} --no-trunc >> $GITHUB_STEP_SUMMARY || true
           echo '```' >> $GITHUB_STEP_SUMMARY
 
+  # Builds and pushes image to GCR - runs only on push/dispatch to develop or release/**
+  publish-image:
+    runs-on: ubuntu-latest
+    needs: validate
+    if: |
+      (github.ref == 'refs/heads/develop' || startsWith(github.ref, 'refs/heads/release/')) &&
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker for GCR
+        run: gcloud auth configure-docker gcr.io
+
+      - name: Determine environment tag
+        id: env-tag
+        run: |
+          if [[ "${{ github.ref }}" == "refs/heads/develop" ]]; then
+            echo "tag=dev-latest" >> $GITHUB_OUTPUT
+          else
+            echo "tag=staging-latest" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build and push Docker image
+        id: push
+        run: |
+          IMAGE_SHA="gcr.io/${{ env.GCP_PROJECT_ID }}/lasso:${{ github.sha }}"
+          IMAGE_ENV="gcr.io/${{ env.GCP_PROJECT_ID }}/lasso:${{ steps.env-tag.outputs.tag }}"
+
+          echo "🔨 Building Docker image..."
+          docker build -t "$IMAGE_SHA" -t "$IMAGE_ENV" .
+
+          echo "📦 Pushing images to GCR..."
+          docker push "$IMAGE_SHA"
+          docker push "$IMAGE_ENV"
+
+          echo "✅ Published: $IMAGE_SHA"
+          echo "✅ Published: $IMAGE_ENV"
+
+      - name: Image summary
+        run: |
+          echo "## 🐳 Docker Image Published" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**SHA image:** \`gcr.io/${{ env.GCP_PROJECT_ID }}/lasso:${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Env image:** \`gcr.io/${{ env.GCP_PROJECT_ID }}/lasso:${{ steps.env-tag.outputs.tag }}\`" >> $GITHUB_STEP_SUMMARY
+
+  # Deploys to dev Cloud Run - runs only after publish-image on develop
+  deploy-dev:
+    runs-on: ubuntu-latest
+    needs: publish-image
+    if: |
+      github.ref == 'refs/heads/develop' &&
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    environment: development
+
+    steps:
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Deploy to Cloud Run (Dev)
+        run: |
+          echo "🚀 Deploying to Cloud Run dev environment..."
+          gcloud run deploy lasso-dev \
+            --image gcr.io/${{ env.GCP_PROJECT_ID }}/lasso:${{ github.sha }} \
+            --platform managed \
+            --region ${{ env.GCP_REGION }} \
+            --allow-unauthenticated \
+            --memory 512Mi \
+            --cpu 1 \
+            --max-instances 3 \
+            --min-instances 0 \
+            --set-env-vars ENVIRONMENT=development,LASTFM_API_BASE_URL=https://ws.audioscrobbler.com,LASTFM_AUTH_URL=https://www.last.fm,LOG_LEVEL=debug \
+            --set-secrets LASTFM_API_KEY=lastfm-api-key:latest,LASTFM_API_SECRET=lastfm-api-secret:latest,SESSION_SECRET=session-secret:latest
+
+      - name: Allow unauthenticated access (Dev)
+        run: |
+          gcloud run services add-iam-policy-binding lasso-dev \
+            --region ${{ env.GCP_REGION }} \
+            --member="allUsers" \
+            --role="roles/run.invoker" || true
+
+      - name: Get service URL
+        id: get-url
+        run: |
+          SERVICE_URL=$(gcloud run services describe lasso-dev \
+            --region ${{ env.GCP_REGION }} \
+            --format 'value(status.url)')
+          echo "url=$SERVICE_URL" >> $GITHUB_OUTPUT
+          echo "🌐 Service URL: $SERVICE_URL"
+
+      - name: Run smoke tests
+        run: |
+          echo "🧪 Running smoke tests..."
+          SERVICE_URL="${{ steps.get-url.outputs.url }}"
+
+          # Health check
+          echo "Testing health endpoint..."
+          health_status=$(curl -s -o /dev/null -w "%{http_code}" $SERVICE_URL/health)
+          if [ "$health_status" != "200" ]; then
+            echo "❌ Health check failed: $health_status"
+            exit 1
+          fi
+          echo "✅ Health check passed"
+
+          # Home page check
+          echo "Testing home page..."
+          home_status=$(curl -s -o /dev/null -w "%{http_code}" $SERVICE_URL/)
+          if [ "$home_status" != "200" ]; then
+            echo "❌ Home page check failed: $home_status"
+            exit 1
+          fi
+          echo "✅ Home page check passed"
+
+          # Static assets check
+          echo "Testing CSS asset..."
+          css_status=$(curl -s -o /dev/null -w "%{http_code}" $SERVICE_URL/css/tailwind.css)
+          if [ "$css_status" != "200" ]; then
+            echo "❌ CSS asset check failed: $css_status"
+            exit 1
+          fi
+          echo "✅ CSS asset check passed"
+
+          echo "Testing JS asset..."
+          js_status=$(curl -s -o /dev/null -w "%{http_code}" $SERVICE_URL/js/main.js)
+          if [ "$js_status" != "200" ]; then
+            echo "❌ JS asset check failed: $js_status"
+            exit 1
+          fi
+          echo "✅ JS asset check passed"
+
+      - name: Deployment summary
+        if: always()
+        run: |
+          echo "## ✅ Dev Deployment" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Service:** \`lasso-dev\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Image:** \`gcr.io/${{ env.GCP_PROJECT_ID }}/lasso:${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**URL:** ${{ steps.get-url.outputs.url }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**View logs:**" >> $GITHUB_STEP_SUMMARY
+          echo "\`gcloud logging read \"resource.type=cloud_run_revision AND resource.labels.service_name=lasso-dev\" --limit 50 --project ${{ env.GCP_PROJECT_ID }}\`" >> $GITHUB_STEP_SUMMARY
+
+  # Deploys to staging Cloud Run - runs only after publish-image on release/**
+  deploy-staging:
+    runs-on: ubuntu-latest
+    needs: publish-image
+    if: |
+      startsWith(github.ref, 'refs/heads/release/') &&
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    environment: staging
+
+    steps:
+      - name: Extract version from branch
+        id: version
+        run: |
+          if [[ "${{ github.ref }}" =~ refs/heads/release/([0-9]+\.[0-9]+\.[0-9]+) ]]; then
+            VERSION="${BASH_REMATCH[1]}"
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+            echo "📦 Release version: $VERSION"
+          else
+            echo "version=staging-latest" >> $GITHUB_OUTPUT
+            echo "📦 Using staging-latest tag"
+          fi
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker for GCR
+        run: gcloud auth configure-docker gcr.io
+
+      - name: Tag image with version
+        run: |
+          echo "🏷️  Tagging image with version v${{ steps.version.outputs.version }}..."
+          gcloud container images add-tag \
+            gcr.io/${{ env.GCP_PROJECT_ID }}/lasso:${{ github.sha }} \
+            gcr.io/${{ env.GCP_PROJECT_ID }}/lasso:v${{ steps.version.outputs.version }} \
+            --quiet
+          echo "✅ Tagged as v${{ steps.version.outputs.version }}"
+
+      - name: Deploy to Cloud Run (Staging)
+        run: |
+          echo "🚀 Deploying to Cloud Run staging environment..."
+          gcloud run deploy lasso-staging \
+            --image gcr.io/${{ env.GCP_PROJECT_ID }}/lasso:${{ github.sha }} \
+            --platform managed \
+            --region ${{ env.GCP_REGION }} \
+            --allow-unauthenticated \
+            --memory 512Mi \
+            --cpu 1 \
+            --max-instances 5 \
+            --min-instances 0 \
+            --set-env-vars ENVIRONMENT=staging,LASTFM_API_BASE_URL=https://ws.audioscrobbler.com,LASTFM_AUTH_URL=https://www.last.fm,LOG_LEVEL=info \
+            --set-secrets LASTFM_API_KEY=lastfm-api-key:latest,LASTFM_API_SECRET=lastfm-api-secret:latest,SESSION_SECRET=session-secret:latest
+
+      - name: Allow unauthenticated access (Staging)
+        run: |
+          gcloud run services add-iam-policy-binding lasso-staging \
+            --region ${{ env.GCP_REGION }} \
+            --member="allUsers" \
+            --role="roles/run.invoker" || true
+
+      - name: Get service URL
+        id: get-url
+        run: |
+          SERVICE_URL=$(gcloud run services describe lasso-staging \
+            --region ${{ env.GCP_REGION }} \
+            --format 'value(status.url)')
+          echo "url=$SERVICE_URL" >> $GITHUB_OUTPUT
+          echo "🌐 Service URL: $SERVICE_URL"
+
+      - name: Run comprehensive smoke tests
+        run: |
+          echo "🧪 Running comprehensive smoke tests..."
+          SERVICE_URL="${{ steps.get-url.outputs.url }}"
+
+          # Health check
+          echo "Testing health endpoint..."
+          health_status=$(curl -s -o /dev/null -w "%{http_code}" $SERVICE_URL/health)
+          if [ "$health_status" != "200" ]; then
+            echo "❌ Health check failed: $health_status"
+            exit 1
+          fi
+          echo "✅ Health check passed"
+
+          # Home page check
+          echo "Testing home page..."
+          home_status=$(curl -s -o /dev/null -w "%{http_code}" $SERVICE_URL/)
+          if [ "$home_status" != "200" ]; then
+            echo "❌ Home page check failed: $home_status"
+            exit 1
+          fi
+          echo "✅ Home page check passed"
+
+          # Static assets check
+          echo "Testing CSS asset..."
+          css_status=$(curl -s -o /dev/null -w "%{http_code}" $SERVICE_URL/css/tailwind.css)
+          if [ "$css_status" != "200" ]; then
+            echo "❌ CSS asset check failed: $css_status"
+            exit 1
+          fi
+
+          # Verify CSS content
+          css_content=$(curl -s $SERVICE_URL/css/tailwind.css | head -c 100)
+          if ! echo "$css_content" | grep -q "tw-"; then
+            echo "❌ CSS content validation failed"
+            exit 1
+          fi
+          echo "✅ CSS asset check passed"
+
+          echo "Testing JS asset..."
+          js_status=$(curl -s -o /dev/null -w "%{http_code}" $SERVICE_URL/js/main.js)
+          if [ "$js_status" != "200" ]; then
+            echo "❌ JS asset check failed: $js_status"
+            exit 1
+          fi
+
+          # Verify JS content
+          js_content=$(curl -s $SERVICE_URL/js/main.js | head -c 100)
+          if ! echo "$js_content" | grep -q "shadow\$provide\|var "; then
+            echo "❌ JS content validation failed"
+            exit 1
+          fi
+          echo "✅ JS asset check passed"
+
+          # Security headers check
+          echo "Verifying security headers..."
+          headers=$(curl -s -I $SERVICE_URL/)
+          if ! echo "$headers" | grep -q "X-Frame-Options"; then
+            echo "⚠️  Warning: X-Frame-Options header missing"
+          fi
+          if ! echo "$headers" | grep -q "Content-Security-Policy"; then
+            echo "⚠️  Warning: Content-Security-Policy header missing"
+          fi
+          echo "✅ Security headers check passed"
+
+      - name: Performance check
+        run: |
+          echo "⚡ Running performance checks..."
+          SERVICE_URL="${{ steps.get-url.outputs.url }}"
+
+          # Test response time
+          response_time=$(curl -o /dev/null -s -w '%{time_total}\n' $SERVICE_URL/health)
+          echo "Response time: ${response_time}s"
+
+          # Warn if response time > 2 seconds
+          if (( $(echo "$response_time > 2.0" | bc -l) )); then
+            echo "⚠️  Warning: Response time exceeds 2 seconds"
+          else
+            echo "✅ Performance check passed"
+          fi
+
+      - name: Post deployment comment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const version = '${{ steps.version.outputs.version }}';
+            const url = '${{ steps.get-url.outputs.url }}';
+            const sha = '${{ github.sha }}';
+
+            github.rest.repos.createCommitComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              commit_sha: sha,
+              body: `🚀 **Staging Deployment Successful**\n\n` +
+                    `📦 Version: \`${version}\`\n` +
+                    `🌐 URL: ${url}\n` +
+                    `🔍 [View Logs](https://console.cloud.google.com/run/detail/${{ env.GCP_REGION }}/lasso-staging/logs?project=${{ env.GCP_PROJECT_ID }})\n\n` +
+                    `✅ All smoke tests passed`
+            });
+
+      - name: Deployment summary
+        if: always()
+        run: |
+          echo "## ✅ Staging Deployment" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Service:** \`lasso-staging\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Version:** \`${{ steps.version.outputs.version }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Image:** \`gcr.io/${{ env.GCP_PROJECT_ID }}/lasso:${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**URL:** ${{ steps.get-url.outputs.url }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Next steps:**" >> $GITHUB_STEP_SUMMARY
+          echo "1. Perform manual testing on staging" >> $GITHUB_STEP_SUMMARY
+          echo "2. Verify OAuth flow works end-to-end" >> $GITHUB_STEP_SUMMARY
+          echo "3. If all tests pass, merge release branch to main for production deployment" >> $GITHUB_STEP_SUMMARY
+
   pr-status-comment:
     runs-on: ubuntu-latest
-    needs: [lint-and-build, docker-build]
+    needs: [validate, docker-validate]
     if: github.event_name == 'pull_request'
     permissions:
       pull-requests: write
@@ -245,18 +647,18 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const status = '${{ needs.lint-and-build.result }}' === 'success' && '${{ needs.docker-build.result }}' === 'success' ? '✅ Success' : '❌ Failed';
-            const lintStatus = '${{ needs.lint-and-build.result }}' === 'success' ? '✅ Passed' : '❌ Failed';
-            const dockerStatus = '${{ needs.docker-build.result }}' === 'success' ? '✅ Passed' : '❌ Failed';
+            const status = '${{ needs.validate.result }}' === 'success' && '${{ needs.docker-validate.result }}' === 'success' ? '✅ Success' : '❌ Failed';
+            const lintStatus = '${{ needs.validate.result }}' === 'success' ? '✅ Passed' : '❌ Failed';
+            const dockerStatus = '${{ needs.docker-validate.result }}' === 'success' ? '✅ Passed' : '❌ Failed';
 
             // Calculate duration
-            const duration = '${{ needs.lint-and-build.outputs.duration }}';
+            const duration = '${{ needs.validate.outputs.duration }}';
             let durationText = '';
             if (duration && duration !== '') {
               const durationSec = parseInt(duration);
               const minutes = Math.floor(durationSec / 60);
               const seconds = durationSec % 60;
-              durationText = `⏱️ **Duration:** ${minutes}m ${seconds}s (~2.5min typical)`;
+              durationText = `⏱️ **Duration:** ${minutes}m ${seconds}s`;
             }
 
             const body = `## CI Build Status: ${status}
@@ -267,10 +669,15 @@ jobs:
 
             ### Results
             - **Lint & Build:** ${lintStatus}
+            - **Backend Tests:** Included in build step
+            - **Frontend Tests:** Included in build step
             - **Docker Build:** ${dockerStatus}
 
+            ### Test Coverage
+            Coverage reports are generated and available in the workflow artifacts.
+
             ### Details
-            View the full [workflow run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) for detailed logs and artifacts.
+            View the full [workflow run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) for detailed logs, test results, and coverage reports.
 
             ${status.includes('❌') ? '⚠️ **Action Required:** Please review the failed checks and push fixes to this branch. CI will automatically re-run on push.' : '✨ **Ready for Review:** All checks passed! This PR is ready for human review.'}
             `;

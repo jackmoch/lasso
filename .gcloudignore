@@ -1,0 +1,50 @@
+# .gcloudignore - Controls what gets uploaded to Cloud Build
+# More permissive than .dockerignore since we need source files for multi-stage build
+
+# Git files
+.git/
+.gitignore
+
+# Environment files (secrets should use Secret Manager)
+.env
+.env.*
+!.env.*.template
+
+# Development files
+.DS_Store
+*.swp
+*.swo
+*~
+
+# IDE files
+.vscode/
+.idea/
+*.iml
+.lsp/
+.calva/
+
+# Documentation (don't need in build)
+docs/
+*.md
+!README.md
+
+# CI/CD (don't need in build)
+.github/
+
+# Local development artifacts (will be rebuilt in Cloud Build)
+target/
+.cpcache/
+.shadow-cljs/
+node_modules/
+.nrepl-port
+
+# Test files (don't need in production build)
+test/
+
+# Build outputs that will be regenerated
+resources/public/js/
+resources/public/css/tailwind.css
+resources/public/css/*.map
+
+# But KEEP input.css (needed for Tailwind build)
+!resources/public/css/input.css

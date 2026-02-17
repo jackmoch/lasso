@@ -25,6 +25,7 @@ resources/public/css/*.map
 # Environment variables (DO NOT COMMIT SECRETS)
 .env
 .env.local
+.env.production
 .env.*.local
 
 # OS files
@@ -51,6 +52,9 @@ Thumbs.db
 
 # Testing
 .clj-kondo/.cache/
+test-results/
+playwright-report/
+playwright/.cache/
 
 # Logs
 logs/

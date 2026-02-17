@@ -1,19 +1,19 @@
 # Project Status
 
-**Last Updated:** 2026-02-12
-**Current Sprint:** Sprint 5-6 (Frontend Development - In Progress)
+**Last Updated:** 2026-02-13
+**Current Sprint:** Sprint 8 (Deployment Preparation - Not Started)
 **Project Phase:** Alpha Development (Pre-Launch)
 
 ---
 
 ## Quick Status
 
-- **Version:** v0.2.0 (released 2026-02-12)
-- **Main Branch:** Production-ready v0.2.0, backend fully functional
-- **Develop Branch:** Synced with main at v0.2.0
-- **Active Work:** `feature/sprint-5-6-frontend-wip` - Frontend complete, bug fixes applied
+- **Version:** v0.4.0 (Sprint 7 completed 2026-02-13)
+- **Main Branch:** Production-ready v0.3.0
+- **Develop Branch:** v0.4.0 (Sprint 7 merged)
+- **Active Work:** Ready to begin Sprint 8
 - **Blockers:** None
-- **Next Milestone:** v0.3.0 (Sprint 5-6: Complete + E2E testing)
+- **Next Milestone:** Sprint 8: Deployment preparation
 
 ---
 
@@ -88,43 +88,129 @@ test/clj/lasso/                   ✅ Full test coverage
     └── manual_testing_issues_test.clj  ✅ E2E integration tests
 ```
 
+### Sprint 5-6: Frontend Development ✅ (v0.3.0)
+
+**Implementation:**
+- [x] Complete Re-frame architecture (db, events, subs)
+- [x] Full API client implementation
+- [x] Authentication UI (login/logout with Last.fm OAuth)
+- [x] Session controls (start/pause/resume/stop)
+- [x] Activity feed with real-time polling
+- [x] Error handling and loading states
+- [x] Tailwind CSS styling and responsive design
+- [x] Hot module reload with shadow-cljs
+- [x] Development environment with `bb dev` (parallel processes)
+
+**Bug Fixes (E2E Testing):**
+- [x] Activity feed now displays scrobbles correctly
+- [x] Pause/Resume buttons update without refresh (Reagent Form-2)
+- [x] Page refresh preserves polling state and scrobbles
+- [x] OAuth web flow callback redirect working
+- [x] Timestamp filtering (no 5min lookback, session-start only)
+- [x] Re-frame dispatch errors fixed
+
+**Files Implemented:**
+```
+src/cljs/lasso/
+├── core.cljs                          ✅ App init + hot reload hooks
+├── db.cljs                            ✅ App state schema
+├── events.cljs                        ✅ Re-frame events
+├── subs.cljs                          ✅ Re-frame subscriptions
+├── api.cljs                           ✅ Backend API client
+├── views.cljs                         ✅ Main views
+└── components/
+    ├── auth.cljs                      ✅ Auth UI
+    ├── session_controls.cljs          ✅ Session controls
+    ├── activity_feed.cljs             ✅ Activity feed
+    └── error.cljs                     ✅ Error display
+
+dev/
+├── user.clj                           ✅ REPL utilities
+├── logging.clj                        ✅ Dev logging config
+└── logback.xml                        ✅ Logback config
+
+docs/development/
+├── DEVELOPMENT.md                     ✅ Dev quickstart
+├── HOT_RELOAD_AND_LOGGING.md         ✅ Hot reload guide
+└── HOT_RELOAD_TEST.md                 ✅ Testing guide
+```
+
+### Sprint 7: Integration & Testing ✅ (v0.4.0)
+
+**Testing Infrastructure:**
+- [x] ClojureScript test infrastructure with shadow-cljs
+- [x] Frontend unit tests (66 tests, 197 assertions)
+  - 32 event handler tests
+  - 21 subscription tests
+  - 13 component tests
+- [x] Backend integration tests (90 tests, 482 assertions)
+  - 15 edge case tests (concurrent updates, network errors, data integrity)
+- [x] E2E testing with Playwright (7 passing, 15 skipped)
+  - Authentication flow tests
+  - Session management flow tests
+  - Error handling tests
+- [x] Test coverage reporting with cloverage (79.53% forms, 91.01% lines)
+- [x] CI/CD integration with test execution and coverage upload
+
+**Testing Documentation (2,502 lines):**
+- [x] Testing README (quick start guide)
+- [x] Comprehensive testing guide (contributor documentation)
+- [x] E2E testing guide (Playwright setup and patterns)
+- [x] Troubleshooting guide (common issues and solutions)
+- [x] Coverage guide (improvement strategies)
+
+**Bug Fixes:**
+- [x] Fixed backend test failures (cache keys, timestamps, OAuth flow)
+- [x] Fixed Babashka && operator in shell commands
+- [x] Fixed CI rlwrap issue (changed clj to clojure command)
+- [x] Fixed component testing patterns for Node.js environment
+
+**Files Implemented:**
+```
+test/cljs/lasso/
+├── test_runner.cljs               ✅ Test entry point
+├── test_utils.cljs                ✅ Re-frame test utilities
+├── smoke_test.cljs                ✅ Infrastructure smoke tests
+├── events_test.cljs               ✅ 32 event handler tests
+├── subs_test.cljs                 ✅ 21 subscription tests
+└── components_test.cljs           ✅ 13 component tests
+
+test/clj/lasso/integration/
+└── edge_cases_test.cljs           ✅ 15 edge case tests
+
+test/e2e/
+├── auth.spec.js                   ✅ Auth flow E2E tests
+├── session.spec.js                ✅ Session management E2E tests
+├── error-handling.spec.js         ✅ Error handling E2E tests
+└── helpers.js                     ✅ E2E test utilities
+
+docs/testing/
+├── README.md                      ✅ Testing quick start (195 lines)
+├── TESTING_GUIDE.md               ✅ Comprehensive guide (653 lines)
+├── E2E_TESTING.md                 ✅ E2E guide (543 lines)
+├── TROUBLESHOOTING.md             ✅ Troubleshooting (517 lines)
+└── COVERAGE.md                    ✅ Coverage guide (594 lines)
+```
+
 ---
 
 ## What's In Progress
 
-**Sprint 5-6: Frontend Development (95% Complete)**
-
-Branch: `feature/sprint-5-6-frontend-wip`
-
-Completed:
-- ✅ Complete Re-frame architecture (db, events, subs)
-- ✅ Full API client implementation
-- ✅ Authentication UI (login/logout)
-- ✅ Session controls (start/pause/resume/stop)
-- ✅ Activity feed with real-time polling
-- ✅ Error handling and loading states
-- ✅ Tailwind CSS styling
-- ✅ **BUG FIX:** OAuth web flow (callback redirect working)
-- ✅ **BUG FIX:** Timestamp filtering (5min lookback, no old scrobbles)
-
-Ready for Testing:
-- [ ] E2E testing with real Last.fm accounts
-- [ ] Manual verification of all flows
-- [ ] Mobile responsiveness testing
+**Nothing currently in progress** - Ready to begin Sprint 8
 
 ---
 
 ## What's Next
 
-**Immediate Next Sprint:** Sprint 5-6 - Frontend Development
+**Immediate Next Sprint:** Sprint 8 - Deployment Preparation
 
 **Goals:**
-- Build ClojureScript/Reagent UI
-- Implement Re-frame state management
-- Create session control components (start/pause/resume/stop)
-- Build real-time activity feed
-- Responsive design with Tailwind CSS
-- Connect frontend to working backend API
+- Complete E2E auth mocking (15 skipped tests)
+- Production environment configuration
+- Docker deployment optimization
+- Google Cloud Run setup
+- Performance monitoring
+- Final documentation polish
 
 **See:** `NEXT.md` for detailed next steps
 
@@ -132,24 +218,35 @@ Ready for Testing:
 
 ## Key Metrics
 
-- **Test Coverage:** 75 tests, 451 assertions, 100% passing
-- **CI Duration:** ~2min 30s average
+- **Test Coverage:** 163 tests, 679 assertions, 100% passing
+  - Backend: 90 tests, 482 assertions
+  - Frontend: 66 tests, 197 assertions
+  - E2E: 7 passing (15 skipped - auth mocking needed)
+- **Code Coverage:** 79.53% forms, 91.01% lines (cloverage)
+- **CI Duration:** ~3min 15s average (includes test execution)
 - **Code Quality:** All linting passes, no warnings
 - **Docker Build:** Working, ~150MB image
 - **Backend Status:** ✅ Fully functional end-to-end
+- **Frontend Status:** ✅ Fully functional end-to-end
+- **Application Status:** ✅ Complete full-stack application working
 
 ---
 
 ## Branch Status
 
 ```
-main (v0.2.0)
+main (v0.3.0)
   └─ Sprint 2 scaffolding
   └─ Sprint 3-4 complete backend
-  └─ All tests passing
+  └─ Sprint 5-6 complete frontend
+  └─ Full-stack application functional
 
-develop (synced with main)
-  └─ Same as main (v0.2.0)
+develop (v0.4.0)
+  └─ All of main (v0.3.0)
+  └─ Sprint 7 testing infrastructure
+  └─ 163 total tests (100% passing)
+  └─ E2E framework with Playwright
+  └─ Comprehensive testing documentation
 ```
 
 **Workflow:**
