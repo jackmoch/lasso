@@ -1,6 +1,6 @@
 # What to Work On Next
 
-**Last Updated:** 2026-02-13 (Post v0.4.0 - Sprint 7 Complete)
+**Last Updated:** 2026-02-17 (Post v0.5.0 - Sprint 8 Complete)
 
 This file tells you exactly what to work on next. When you finish a task, update this file and commit it.
 
@@ -8,106 +8,162 @@ This file tells you exactly what to work on next. When you finish a task, update
 
 ## Immediate Next Task
 
-### 🎯 Sprint 8: Deployment Preparation
+### 🎯 Sprint 9: Launch
 
-**Goal:** Prepare application for production deployment on Google Cloud Run
+**Goal:** Deploy Lasso to production and make it available to users
 
 **Current Status:**
-- ✅ Sprint 7 complete (163 tests, comprehensive documentation)
-- ✅ Backend v0.2.0 fully functional
-- ✅ Frontend v0.3.0 fully functional
-- ✅ Testing infrastructure in place (79.53% coverage)
-- ⚠️ 15 E2E tests skipped (require auth mocking)
-- 🎯 Ready for deployment preparation
+- ✅ Sprint 8 complete (25 E2E tests, deployment infrastructure ready)
+- ✅ All 181 tests passing (backend + frontend + E2E)
+- ✅ Docker build working, Cloud Run workflows configured
+- ✅ Security middleware in place (CORS, CSP, rate limiting)
+- ✅ Deployment infrastructure ready
+- 🎯 Need real GCP project credentials to complete deployment
 
-**Branch:** Create `feature/sprint-8-deployment` from `develop`
-
----
-
-## Sprint 8 Tasks
-
-### Phase 1: E2E Test Completion (Priority)
-
-**Goal:** Complete E2E test suite by implementing auth mocking
-
-**Tasks:**
-1. **Auth Mocking Infrastructure**
-   - [ ] Create mock OAuth server for E2E tests
-   - [ ] Mock Last.fm API endpoints for testing
-   - [ ] Enable 15 skipped E2E tests
-   - [ ] Verify all E2E flows pass with mocked auth
-
-2. **E2E Coverage Expansion**
-   - [ ] Add more error scenario tests
-   - [ ] Add mobile viewport E2E tests
-   - [ ] Add network failure simulation tests
-
-**Acceptance Criteria:**
-- All 22 E2E tests passing (0 skipped)
-- Auth flow fully tested without real credentials
-- E2E tests run reliably in CI
-
-**Priority:** HIGH - Required before production deployment
+**Branch:** Create `feature/sprint-9-launch` from `develop`
 
 ---
 
-### Phase 2: Production Environment Configuration
+## Sprint 9 Tasks
 
-**Goal:** Set up production-ready infrastructure
+### Phase 1: GCP Setup & Staging Deployment (Priority)
 
-**Tasks:**
-1. **Environment Configuration**
-   - [ ] Create production environment variables
-   - [ ] Set up Google Cloud Run project
-   - [ ] Configure OAuth callback URLs for production
-   - [ ] Set up SSL/HTTPS certificates
-
-2. **Build Optimization**
-   - [ ] Minimize frontend bundle size
-   - [ ] Enable production optimizations in shadow-cljs
-   - [ ] Configure CDN for static assets (if needed)
-   - [ ] Test production build locally
-
-3. **Security Hardening**
-   - [ ] Review session security settings
-   - [ ] Configure CORS policies
-   - [ ] Set up rate limiting
-   - [ ] Security audit of environment variables
-
-**Acceptance Criteria:**
-- Production build completes successfully
-- All security best practices implemented
-- Environment variables properly configured
-
----
-
-### Phase 3: Deployment & Monitoring
-
-**Goal:** Deploy to Google Cloud Run and set up monitoring
+**Goal:** Configure real GCP infrastructure and deploy to staging
 
 **Tasks:**
-1. **Initial Deployment**
-   - [ ] Deploy to Google Cloud Run staging environment
-   - [ ] Configure health checks
-   - [ ] Test with real Last.fm API
+1. **GCP Project Setup**
+   - [ ] Create GCP project (or use existing)
+   - [ ] Enable Cloud Run, Container Registry APIs
+   - [ ] Create service account with appropriate roles
+   - [ ] Add secrets to GitHub: `GCP_PROJECT_ID`, `GCP_SA_KEY`, `GCP_REGION`
+
+2. **Secrets Configuration**
+   - [ ] Add production secrets to GitHub repository:
+     - `LASTFM_API_KEY` - Real Last.fm API key
+     - `LASTFM_API_SECRET` - Real Last.fm API secret
+     - `LASTFM_CALLBACK_URL` - Production callback URL
+     - `SESSION_SECRET` - Random 32+ char secret
+   - [ ] Configure Cloud Run environment variables
+
+3. **Staging Deployment**
+   - [ ] Trigger deploy-staging workflow
+   - [ ] Verify container starts successfully
+   - [ ] Test OAuth flow end-to-end with real Last.fm
    - [ ] Smoke test all functionality
 
-2. **Monitoring & Logging**
-   - [ ] Set up Google Cloud Logging
-   - [ ] Configure error tracking (Sentry or similar)
-   - [ ] Set up uptime monitoring
-   - [ ] Create alerting rules
+**Acceptance Criteria:**
+- App running on Cloud Run staging URL
+- Full OAuth flow working with real Last.fm credentials
+- Session start/pause/resume/stop all working
+- Scrobbles appearing correctly in Last.fm profile
 
-3. **Documentation**
-   - [ ] Deployment runbook
-   - [ ] Rollback procedures
-   - [ ] Incident response guide
-   - [ ] User guide for non-technical users
+**Priority:** HIGH - Core sprint goal
+
+---
+
+### Phase 2: Production Deployment
+
+**Goal:** Deploy to production and configure domain
+
+**Tasks:**
+1. **Production Configuration**
+   - [ ] Update OAuth callback URL to production domain
+   - [ ] Configure custom domain (if desired)
+   - [ ] Set up HTTPS (Cloud Run provides this automatically)
+   - [ ] Update CORS settings for production domain
+
+2. **Production Deployment**
+   - [ ] Trigger deploy-production workflow
+   - [ ] Verify production deployment
+   - [ ] Test complete user flow on production
+
+3. **DNS & Domain** (if applicable)
+   - [ ] Configure custom domain in Cloud Run
+   - [ ] Update Last.fm API application settings with production URL
 
 **Acceptance Criteria:**
-- Application runs successfully on Cloud Run
-- Monitoring and logging operational
-- Documentation complete
+- App accessible at production URL
+- All functionality working in production
+
+---
+
+### Phase 3: Monitoring & Alerting
+
+**Goal:** Set up observability for production
+
+**Tasks:**
+1. **Cloud Logging**
+   - [ ] Verify application logs appear in Cloud Logging
+   - [ ] Create log-based metrics for key events (logins, sessions started)
+   - [ ] Set up log retention policy
+
+2. **Uptime Monitoring**
+   - [ ] Configure Cloud Monitoring uptime checks
+   - [ ] Create alerting policy for downtime
+   - [ ] Set up notification channel (email, Slack, etc.)
+
+3. **Error Tracking** (optional)
+   - [ ] Evaluate Sentry or Cloud Error Reporting
+   - [ ] Configure error alerts
+
+**Acceptance Criteria:**
+- Logs visible in Cloud Logging
+- Uptime monitoring active with alerting
+- On-call runbook created
+
+---
+
+### Phase 4: Documentation & Launch
+
+**Goal:** Prepare for public launch
+
+**Tasks:**
+1. **User Documentation**
+   - [ ] Create user guide explaining how to use Lasso
+   - [ ] FAQ page (why scrobbles are delayed, what "following" means)
+   - [ ] Troubleshooting guide for common user issues
+
+2. **README Update**
+   - [ ] Update README with public-facing description
+   - [ ] Add screenshots of the application
+   - [ ] Add link to live application
+
+3. **Launch Announcement**
+   - [ ] Write launch announcement (blog post, social media, etc.)
+
+**Acceptance Criteria:**
+- User guide complete
+- README polished for public viewers
+- Ready to share with users
+
+---
+
+## GitHub Secrets Needed for Deployment
+
+To complete Sprint 9, the following GitHub repository secrets must be configured:
+
+**GCP Credentials:**
+```
+GCP_PROJECT_ID       - Your GCP project ID
+GCP_SA_KEY           - Service account key JSON (base64 encoded)
+GCP_REGION           - Cloud Run region (e.g., us-central1)
+```
+
+**Application Secrets:**
+```
+LASTFM_API_KEY       - Last.fm API key from https://www.last.fm/api/account/create
+LASTFM_API_SECRET    - Last.fm API secret
+LASTFM_CALLBACK_URL  - https://your-cloud-run-url/api/auth/callback
+SESSION_SECRET       - Random 32+ character string
+```
+
+**Setting up in GitHub:**
+```bash
+# Using gh CLI
+gh secret set GCP_PROJECT_ID --body "your-project-id"
+gh secret set LASTFM_API_KEY --body "your-api-key"
+# etc.
+```
 
 ---
 
@@ -124,9 +180,9 @@ These features can be tackled post-launch:
   - Better messaging for invalid/non-existent usernames
   - API-specific error explanations with recovery suggestions
 
-- **Scrobble Deduplication Documentation**
-  - Create technical doc explaining how consecutive plays work
-  - Add to `docs/technical/`
+- **Redis Session Store**
+  - Migrate from in-memory atom to Redis
+  - Enables multi-instance deployment and session persistence across restarts
 
 - **Mobile App** (Far future)
   - Native iOS/Android apps
@@ -136,7 +192,7 @@ These features can be tackled post-launch:
 
 ## How to Get Started
 
-### Starting Sprint 8
+### Starting Sprint 9
 
 ```bash
 # 1. Ensure you're on develop with latest changes
@@ -144,48 +200,28 @@ git checkout develop
 git pull origin develop
 
 # 2. Create sprint branch
-git checkout -b feature/sprint-8-deployment
+git checkout -b feature/sprint-9-launch
 
-# 3. Start development environment
-bb dev
+# 3. Configure GitHub secrets (see above)
 
-# 4. Begin Phase 1: E2E Auth Mocking
-# Priority: Enable the 15 skipped E2E tests
+# 4. Test staging deployment
+# (after secrets are configured, push to trigger CI)
 ```
-
-### Phase 1 Quick Start: E2E Auth Mocking
-
-**Priority task:** Implement mock OAuth server for E2E tests
-
-**Approach:**
-1. Create mock Last.fm OAuth endpoints (token, session)
-2. Mock API endpoints used in tests (getRecentTracks, getInfo)
-3. Update Playwright config to use mock server
-4. Enable skipped tests and verify they pass
-5. Document mock server setup
-
-**Files to create/modify:**
-- `test/e2e/mocks/lastfm-mock-server.js` - Mock server implementation
-- `test/e2e/setup.js` - Global test setup
-- `playwright.config.js` - Add mock server to global setup
-- `test/e2e/*.spec.js` - Enable skipped tests
 
 ---
 
-## Success Criteria for v0.5.0 Release
+## Success Criteria for v0.6.0 Release
 
-Sprint 8 complete when:
-- ✅ All 22 E2E tests passing (0 skipped)
-- ✅ Production build optimized and tested
-- ✅ Deployed to Google Cloud Run staging
+Sprint 9 complete when:
+- ✅ App deployed to production Cloud Run
+- ✅ Full OAuth flow working with real Last.fm API
 - ✅ Monitoring and logging operational
-- ✅ Security audit passed
-- ✅ Deployment documentation complete
-- ✅ Ready for production launch
+- ✅ User documentation complete
+- ✅ Ready for public use
 
-**Expected Timeline:** 1-2 weeks
+**Expected Timeline:** 1-2 weeks (mostly GCP setup and testing)
 
-**Next Release:** v0.5.0 (Sprint 8 complete, ready for launch)
+**Next Release:** v0.6.0 (Sprint 9 complete, production launched)
 
 ---
 
@@ -193,11 +229,11 @@ Sprint 8 complete when:
 
 If you encounter issues or have questions:
 1. Check `MEMORY.md` for known gotchas
-2. Check `docs/testing/` for testing guides
-3. Check `docs/development/` for dev guides
-4. Review test output for clues
-5. Ask in PR comments or create issue
+2. Check `docs/deployment/` for deployment guides
+3. Check `docs/testing/` for testing guides
+4. Review CI workflow logs for deployment failures
+5. Check GCP Console for Cloud Run logs
 
 ---
 
-**Remember:** Sprint 8 focuses on production readiness. Priority is completing E2E tests, then ensuring smooth deployment. Take time to get deployment infrastructure right - it's the foundation for a successful launch! 🚀
+**Remember:** Sprint 9 is the finish line! The application is code-complete and tested. The main work is infrastructure configuration and validation. Take time to verify everything works correctly in staging before promoting to production. 🚀

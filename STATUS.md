@@ -1,19 +1,19 @@
 # Project Status
 
-**Last Updated:** 2026-02-13
-**Current Sprint:** Sprint 8 (Deployment Preparation - Not Started)
+**Last Updated:** 2026-02-17
+**Current Sprint:** Sprint 9 (Launch Preparation - Not Started)
 **Project Phase:** Alpha Development (Pre-Launch)
 
 ---
 
 ## Quick Status
 
-- **Version:** v0.4.0 (Sprint 7 completed 2026-02-13)
-- **Main Branch:** Production-ready v0.3.0
-- **Develop Branch:** v0.4.0 (Sprint 7 merged)
-- **Active Work:** Ready to begin Sprint 8
+- **Version:** v0.5.0 (Sprint 8 completed 2026-02-17)
+- **Main Branch:** Production-ready v0.5.0
+- **Develop Branch:** v0.5.0 (Sprint 8 merged)
+- **Active Work:** Ready to begin Sprint 9
 - **Blockers:** None
-- **Next Milestone:** Sprint 8: Deployment preparation
+- **Next Milestone:** Sprint 9: Launch
 
 ---
 
@@ -30,7 +30,7 @@
 ### Gitflow Setup (2026-02-12) ✅
 - [x] `develop` branch created and protected
 - [x] Branch protection rules on `main` and `develop`
-- [x] CI requires passing `lint-and-build` check
+- [x] CI requires passing `validate` check
 - [x] Documentation updated for gitflow workflow
 
 ### Sprint 3-4: Complete Backend Implementation ✅ (v0.2.0)
@@ -61,33 +61,6 @@
 - [x] Comprehensive integration tests (75 tests, 451 assertions)
 - [x] Manual E2E testing completed successfully
 
-**Files Implemented:**
-```
-src/clj/lasso/
-├── auth/
-│   ├── handlers.clj              ✅ OAuth handlers
-│   └── session.clj               ✅ Session management
-├── lastfm/
-│   ├── client.clj                ✅ API client (GET/POST support)
-│   ├── oauth.clj                 ✅ OAuth flow
-│   └── scrobble.clj              ✅ Scrobble operations
-├── middleware.clj                ✅ Auth interceptor
-├── polling/
-│   ├── engine.clj                ✅ Polling orchestration
-│   └── scheduler.clj             ✅ Scheduling logic
-├── session/
-│   ├── handlers.clj              ✅ Session route handlers
-│   ├── manager.clj               ✅ Session lifecycle
-│   └── store.clj                 ✅ Session storage
-└── util/
-    ├── crypto.clj                ✅ Encryption
-    └── http.clj                  ✅ HTTP utilities
-
-test/clj/lasso/                   ✅ Full test coverage
-└── integration/
-    └── manual_testing_issues_test.clj  ✅ E2E integration tests
-```
-
 ### Sprint 5-6: Frontend Development ✅ (v0.3.0)
 
 **Implementation:**
@@ -109,33 +82,7 @@ test/clj/lasso/                   ✅ Full test coverage
 - [x] Timestamp filtering (no 5min lookback, session-start only)
 - [x] Re-frame dispatch errors fixed
 
-**Files Implemented:**
-```
-src/cljs/lasso/
-├── core.cljs                          ✅ App init + hot reload hooks
-├── db.cljs                            ✅ App state schema
-├── events.cljs                        ✅ Re-frame events
-├── subs.cljs                          ✅ Re-frame subscriptions
-├── api.cljs                           ✅ Backend API client
-├── views.cljs                         ✅ Main views
-└── components/
-    ├── auth.cljs                      ✅ Auth UI
-    ├── session_controls.cljs          ✅ Session controls
-    ├── activity_feed.cljs             ✅ Activity feed
-    └── error.cljs                     ✅ Error display
-
-dev/
-├── user.clj                           ✅ REPL utilities
-├── logging.clj                        ✅ Dev logging config
-└── logback.xml                        ✅ Logback config
-
-docs/development/
-├── DEVELOPMENT.md                     ✅ Dev quickstart
-├── HOT_RELOAD_AND_LOGGING.md         ✅ Hot reload guide
-└── HOT_RELOAD_TEST.md                 ✅ Testing guide
-```
-
-### Sprint 7: Integration & Testing ✅ (v0.4.0)
+### Sprint 7: Integration Testing & Polish ✅ (part of v0.5.0)
 
 **Testing Infrastructure:**
 - [x] ClojureScript test infrastructure with shadow-cljs
@@ -145,10 +92,6 @@ docs/development/
   - 13 component tests
 - [x] Backend integration tests (90 tests, 482 assertions)
   - 15 edge case tests (concurrent updates, network errors, data integrity)
-- [x] E2E testing with Playwright (7 passing, 15 skipped)
-  - Authentication flow tests
-  - Session management flow tests
-  - Error handling tests
 - [x] Test coverage reporting with cloverage (79.53% forms, 91.01% lines)
 - [x] CI/CD integration with test execution and coverage upload
 
@@ -159,58 +102,67 @@ docs/development/
 - [x] Troubleshooting guide (common issues and solutions)
 - [x] Coverage guide (improvement strategies)
 
+### Sprint 8: Deployment Preparation ✅ (v0.5.0)
+
+**E2E Testing (25 tests, 0 skipped):**
+- [x] Mock Last.fm server implementation (`test/e2e/mocks/lastfm-mock-server.js`)
+- [x] Full Playwright E2E test suite (auth, session management, error handling)
+- [x] All 25 E2E tests passing (was 7 passing, 15 skipped)
+- [x] Tests run reliably in CI with mock server
+
+**Deployment Infrastructure:**
+- [x] Google Cloud Run deployment workflows (dev/staging/prod)
+- [x] Production security middleware (CORS, CSP, rate limiting, request logging)
+- [x] SPA routing via `spa-not-found-interceptor` in server.clj
+- [x] Unified CI/CD pipeline (lint → test → build → docker → deploy)
+- [x] IAM configuration for unauthenticated Cloud Run access
+- [x] Docker multi-stage build with proper frontend asset copying
+
 **Bug Fixes:**
-- [x] Fixed backend test failures (cache keys, timestamps, OAuth flow)
-- [x] Fixed Babashka && operator in shell commands
-- [x] Fixed CI rlwrap issue (changed clj to clojure command)
-- [x] Fixed component testing patterns for Node.js environment
+- [x] SPA 404 routing (non-API routes serve index.html)
+- [x] Invalid username error display (`INVALID_TARGET_USERNAME` code)
+- [x] clj-http error body parsing (`:throw-exceptions false` + `:coerce :always`)
+- [x] error_code format consistency (underscore, not hyphen)
+- [x] Request logging nil status crash
+- [x] CORS in `:leave` phase for all responses
+- [x] CSP environment-aware (relaxed in dev, strict in prod)
 
 **Files Implemented:**
 ```
-test/cljs/lasso/
-├── test_runner.cljs               ✅ Test entry point
-├── test_utils.cljs                ✅ Re-frame test utilities
-├── smoke_test.cljs                ✅ Infrastructure smoke tests
-├── events_test.cljs               ✅ 32 event handler tests
-├── subs_test.cljs                 ✅ 21 subscription tests
-└── components_test.cljs           ✅ 13 component tests
-
-test/clj/lasso/integration/
-└── edge_cases_test.cljs           ✅ 15 edge case tests
+src/clj/lasso/middleware/
+└── security.clj                  ✅ CORS, CSP, rate limiting, logging
 
 test/e2e/
-├── auth.spec.js                   ✅ Auth flow E2E tests
-├── session.spec.js                ✅ Session management E2E tests
-├── error-handling.spec.js         ✅ Error handling E2E tests
-└── helpers.js                     ✅ E2E test utilities
+├── mocks/
+│   └── lastfm-mock-server.js     ✅ Mock Last.fm API server
+├── auth.spec.js                  ✅ Auth flow E2E tests (updated)
+├── session.spec.js               ✅ Session management E2E tests (updated)
+├── error-handling.spec.js        ✅ Error handling E2E tests (updated)
+└── helpers.js                    ✅ E2E test utilities (updated)
 
-docs/testing/
-├── README.md                      ✅ Testing quick start (195 lines)
-├── TESTING_GUIDE.md               ✅ Comprehensive guide (653 lines)
-├── E2E_TESTING.md                 ✅ E2E guide (543 lines)
-├── TROUBLESHOOTING.md             ✅ Troubleshooting (517 lines)
-└── COVERAGE.md                    ✅ Coverage guide (594 lines)
+docs/deployment/                  ✅ Deployment documentation
+docs/sprints/sprint-8-summary.md  ✅ Sprint 8 summary
 ```
 
 ---
 
 ## What's In Progress
 
-**Nothing currently in progress** - Ready to begin Sprint 8
+**Nothing currently in progress** - Ready to begin Sprint 9
 
 ---
 
 ## What's Next
 
-**Immediate Next Sprint:** Sprint 8 - Deployment Preparation
+**Immediate Next Sprint:** Sprint 9 - Launch
 
 **Goals:**
-- Complete E2E auth mocking (15 skipped tests)
-- Production environment configuration
-- Docker deployment optimization
-- Google Cloud Run setup
-- Performance monitoring
+- Configure real GCP project with proper credentials
+- Deploy to staging environment and smoke test
+- Deploy to production
+- Set up monitoring and alerting
 - Final documentation polish
+- User guide for non-technical users
 
 **See:** `NEXT.md` for detailed next steps
 
@@ -218,35 +170,34 @@ docs/testing/
 
 ## Key Metrics
 
-- **Test Coverage:** 163 tests, 679 assertions, 100% passing
+- **Test Coverage:** 181 tests, 100% passing
   - Backend: 90 tests, 482 assertions
   - Frontend: 66 tests, 197 assertions
-  - E2E: 7 passing (15 skipped - auth mocking needed)
+  - E2E: 25 passing (0 skipped)
 - **Code Coverage:** 79.53% forms, 91.01% lines (cloverage)
-- **CI Duration:** ~3min 15s average (includes test execution)
+- **CI Duration:** ~3min 30s average (validate stage)
 - **Code Quality:** All linting passes, no warnings
-- **Docker Build:** Working, ~150MB image
+- **Docker Build:** Working, multi-stage build
 - **Backend Status:** ✅ Fully functional end-to-end
 - **Frontend Status:** ✅ Fully functional end-to-end
 - **Application Status:** ✅ Complete full-stack application working
+- **Deployment Status:** ✅ Infrastructure ready, GCP credentials needed
 
 ---
 
 ## Branch Status
 
 ```
-main (v0.3.0)
+main (v0.5.0)
   └─ Sprint 2 scaffolding
-  └─ Sprint 3-4 complete backend
-  └─ Sprint 5-6 complete frontend
-  └─ Full-stack application functional
-
-develop (v0.4.0)
-  └─ All of main (v0.3.0)
+  └─ Sprint 3-4 complete backend (v0.2.0)
+  └─ Sprint 5-6 complete frontend (v0.3.0)
   └─ Sprint 7 testing infrastructure
-  └─ 163 total tests (100% passing)
-  └─ E2E framework with Playwright
-  └─ Comprehensive testing documentation
+  └─ Sprint 8 deployment preparation + E2E tests
+
+develop (v0.5.0)
+  └─ All of main (v0.5.0)
+  └─ Ready for Sprint 9 work
 ```
 
 **Workflow:**
@@ -262,10 +213,12 @@ develop (v0.4.0)
 3. **Polling Interval:** 20 seconds (respects Last.fm rate limits)
 4. **Rate Limiting:** Client-side with 200ms minimum interval
 5. **Security:** OAuth-only (no passwords), encrypted session keys
-6. **CI Strategy:** Single workflow, runs on both `main` and `develop` PRs
+6. **CI Strategy:** Unified sequential pipeline (validate → docker → deploy)
 7. **Handler Pattern:** Pedestal handlers take `[request]` and return response map directly
 8. **Body Parsing:** Manual InputStream parsing with fallbacks for string/map
 9. **HTTP Methods:** GET for unsigned (reads), POST for signed (writes)
+10. **SPA Routing:** Pedestal `::http/not-found-interceptor` for serving index.html
+11. **error_code Format:** Underscore (not hyphen) for JSON key consistency
 
 See `MEMORY.md` for more context on decisions and gotchas.
 
@@ -277,7 +230,7 @@ See `MEMORY.md` for more context on decisions and gotchas.
 - **Backend:** Clojure with Pedestal + Jetty
 - **Frontend:** ClojureScript with Reagent + Re-frame
 - **Build:** tools.deps, shadow-cljs, Tailwind CSS
-- **Deployment:** Docker on Google Cloud Run (planned)
+- **Deployment:** Docker on Google Cloud Run (infrastructure ready, needs credentials)
 
 ---
 
@@ -289,10 +242,13 @@ bb dev                       # Start everything (backend + frontend + hot reload
 # or: clj -M:dev:repl then (start)
 
 # Other useful tasks
-bb test                      # Run all tests (82 tests)
+bb test                      # Run all backend tests
 bb build                     # Build production artifacts
 bb clean                     # Clean build artifacts
 bb tasks                     # See all available tasks
+
+# E2E tests
+npx playwright test          # Run E2E tests (requires backend running)
 
 # Git (Gitflow)
 git checkout develop         # Work from develop
