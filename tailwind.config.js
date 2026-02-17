@@ -4,6 +4,13 @@ module.exports = {
     './resources/public/index.html',
     './src/cljs/**/*.cljs'
   ],
+
+  // Safelist for dynamically generated classes
+  safelist: [
+    // Add any classes that are generated dynamically
+    // e.g., 'bg-red-500', 'text-green-700'
+  ],
+
   theme: {
     extend: {
       colors: {
@@ -12,5 +19,11 @@ module.exports = {
       },
     },
   },
+
   plugins: [],
+
+  // Production optimizations
+  ...(process.env.NODE_ENV === 'production' && {
+    // Additional production-specific config if needed
+  }),
 }

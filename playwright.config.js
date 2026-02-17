@@ -8,6 +8,10 @@ const { defineConfig, devices } = require('@playwright/test');
 module.exports = defineConfig({
   testDir: './test/e2e',
 
+  /* Global setup/teardown for mock server */
+  globalSetup: require.resolve('./test/e2e/global-setup.js'),
+  globalTeardown: require.resolve('./test/e2e/global-teardown.js'),
+
   /* Maximum time one test can run for */
   timeout: 30 * 1000,
 
@@ -72,5 +76,14 @@ module.exports = defineConfig({
     url: 'http://localhost:8080',
     reuseExistingServer: false,
     timeout: 120 * 1000,
+    env: {
+      // Point backend to mock Last.fm server for E2E tests
+      LASTFM_API_BASE_URL: 'http://localhost:3456',
+      LASTFM_AUTH_URL: 'http://localhost:3456',
+      LASTFM_API_KEY: 'test-api-key',
+      LASTFM_API_SECRET: 'test-api-secret',
+      SESSION_SECRET: 'test-session-secret-for-e2e-testing',
+      ENVIRONMENT: 'test',
+    },
   } : undefined,
 });

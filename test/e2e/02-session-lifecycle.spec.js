@@ -1,6 +1,7 @@
 const { test, expect } = require('@playwright/test');
 const {
   waitForAppReady,
+  setupAuthenticatedContext,
   getSessionState,
   waitForSessionState,
   clearAppState
@@ -24,26 +25,10 @@ test.describe('Session Lifecycle', () => {
     });
   });
 
-  // Note: For authenticated tests, we would need to either:
-  // 1. Mock the OAuth flow
-  // 2. Use a test Last.fm account
-  // 3. Stub the backend authentication
-  //
-  // For now, these are placeholders showing what should be tested
-
-  test.describe.skip('Authenticated User - Session Start', () => {
-    test.beforeEach(async ({ page, context }) => {
-      // TODO: Mock authentication
-      // This would set a session cookie or use a test endpoint
-      await context.addCookies([{
-        name: 'lasso-session',
-        value: 'test-session-id',
-        domain: 'localhost',
-        path: '/',
-      }]);
-
-      await page.reload();
-      await waitForAppReady(page);
+  test.describe('Authenticated User - Session Start', () => {
+    test.beforeEach(async ({ page }) => {
+      // Authenticate using mock OAuth flow
+      await setupAuthenticatedContext(page);
     });
 
     test('should display session controls when authenticated', async ({ page }) => {
@@ -101,18 +86,10 @@ test.describe('Session Lifecycle', () => {
     });
   });
 
-  test.describe.skip('Authenticated User - Session Controls', () => {
-    test.beforeEach(async ({ page, context }) => {
-      // TODO: Mock authentication and active session
-      await context.addCookies([{
-        name: 'lasso-session',
-        value: 'test-session-id',
-        domain: 'localhost',
-        path: '/',
-      }]);
-
-      await page.reload();
-      await waitForAppReady(page);
+  test.describe('Authenticated User - Session Controls', () => {
+    test.beforeEach(async ({ page }) => {
+      // Authenticate and start a session
+      await setupAuthenticatedContext(page);
 
       // Start a session
       const usernameInput = page.getByPlaceholder(/e\.g\., johndoe/i);
@@ -193,18 +170,10 @@ test.describe('Session Lifecycle', () => {
     });
   });
 
-  test.describe.skip('Authenticated User - Activity Feed', () => {
-    test.beforeEach(async ({ page, context }) => {
-      // TODO: Mock authentication and active session with scrobbles
-      await context.addCookies([{
-        name: 'lasso-session',
-        value: 'test-session-id',
-        domain: 'localhost',
-        path: '/',
-      }]);
-
-      await page.reload();
-      await waitForAppReady(page);
+  test.describe('Authenticated User - Activity Feed', () => {
+    test.beforeEach(async ({ page }) => {
+      // Authenticate using mock OAuth flow
+      await setupAuthenticatedContext(page);
     });
 
     test('should display activity feed when session is active', async ({ page }) => {

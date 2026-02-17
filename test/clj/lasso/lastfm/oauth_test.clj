@@ -21,6 +21,7 @@
 (deftest generate-auth-url-test
   (testing "Generate auth URL with callback (web flow)"
     (with-redefs [lasso.config/config {:lastfm {:api-key "test-api-key"
+                                                 :auth-url "https://www.last.fm"
                                                  :callback-url "http://localhost:8080/callback"}}]
       (let [url (oauth/generate-auth-url)]
         (is (string? url))

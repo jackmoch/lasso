@@ -1,0 +1,94 @@
+# Google Cloud Build Configuration
+# Builds and optionally deploys Docker images to Google Container Registry
+#
+# Usage:
+#   # Build only (no deployment):
+#   gcloud builds submit --config cloudbuild.yaml
+#
+#   # Build with specific tag:
+#   gcloud builds submit --config cloudbuild.yaml --substitutions=_IMAGE_TAG=v1.0.0
+#
+#   # Build and deploy to specific environment:
+#   gcloud builds submit --config cloudbuild.yaml \
+#     --substitutions=_DEPLOY=true,_SERVICE_NAME=lasso-dev,_ENVIRONMENT=development
+#
+# Note: GitHub Actions handles automated deployments.
+#       This file is primarily for manual builds and testing.
+
+steps:
+  # Step 1: Build Docker image
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'build-image'
+    args:
+      - 'build'
+      - '-t'
+      - 'gcr.io/$PROJECT_ID/lasso:${_IMAGE_TAG}'
+      - '-t'
+      - 'gcr.io/$PROJECT_ID/lasso:${_ENV_TAG}'
+      - '.'
+    timeout: 600s
+
+  # Step 2: Push Docker images to Container Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'push-image-versioned'
+    args:
+      - 'push'
+      - 'gcr.io/$PROJECT_ID/lasso:${_IMAGE_TAG}'
+
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'push-image-env'
+    args:
+      - 'push'
+      - 'gcr.io/$PROJECT_ID/lasso:${_ENV_TAG}'
+
+  # Step 3: Deploy to Cloud Run (optional, controlled by _DEPLOY substitution)
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: 'deploy-cloud-run'
+    entrypoint: bash
+    args:
+      - '-c'
+      - |
+        if [ "${_DEPLOY}" = "true" ]; then
+          echo "🚀 Deploying to Cloud Run..."
+          gcloud run deploy ${_SERVICE_NAME} \
+            --image gcr.io/$PROJECT_ID/lasso:${_IMAGE_TAG} \
+            --region ${_REGION} \
+            --platform managed \
+            --allow-unauthenticated \
+            --memory ${_MEMORY} \
+            --cpu ${_CPU} \
+            --max-instances ${_MAX_INSTANCES} \
+            --min-instances ${_MIN_INSTANCES} \
+            --set-env-vars ENVIRONMENT=${_ENVIRONMENT},LASTFM_API_BASE_URL=https://ws.audioscrobbler.com,LASTFM_AUTH_URL=https://www.last.fm,LOG_LEVEL=${_LOG_LEVEL} \
+            --set-secrets LASTFM_API_KEY=lastfm-api-key:latest,LASTFM_API_SECRET=lastfm-api-secret:latest,SESSION_SECRET=session-secret:latest
+        else
+          echo "ℹ️  Skipping deployment (_DEPLOY not set to 'true')"
+        fi
+
+# Substitutions (can be overridden)
+# Usage: --substitutions=_IMAGE_TAG=v1.0.0,_ENVIRONMENT=staging
+substitutions:
+  _REGION: us-central1
+  _IMAGE_TAG: manual-build-${SHORT_SHA}
+  _ENV_TAG: manual-latest
+  _DEPLOY: 'false'
+  _SERVICE_NAME: lasso-manual-test
+  _ENVIRONMENT: development
+  _MEMORY: 512Mi
+  _CPU: '1'
+  _MAX_INSTANCES: '5'
+  _MIN_INSTANCES: '0'
+  _LOG_LEVEL: info
+
+# Store build logs
+options:
+  logging: CLOUD_LOGGING_ONLY
+  machineType: 'N1_HIGHCPU_8'
+
+# Build timeout
+timeout: 1200s
+
+# Store images in Container Registry
+images:
+  - 'gcr.io/$PROJECT_ID/lasso:${_IMAGE_TAG}'
+  - 'gcr.io/$PROJECT_ID/lasso:${_ENV_TAG}'

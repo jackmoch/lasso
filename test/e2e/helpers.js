@@ -90,18 +90,52 @@ async function getErrorMessage(page) {
 }
 
 /**
- * Mock Last.fm OAuth callback
- * This simulates a successful OAuth flow by directly setting session cookie
+ * Authenticate user via mock OAuth flow
+ *
+ * This simulates the complete Last.fm OAuth flow by:
+ * 1. Clicking the login button
+ * 2. Following the redirect to mock Last.fm
+ * 3. Completing the OAuth callback
+ * 4. Waiting for authentication to complete
+ *
  * @param {import('@playwright/test').Page} page
- * @param {string} username - Mock username
+ * @param {string} username - Mock username (default: 'testuser')
+ * @returns {Promise<void>}
  */
 async function mockLastFmAuth(page, username = 'testuser') {
-  // This would need to be implemented based on your session structure
-  // For now, this is a placeholder showing the concept
-  await page.evaluate((user) => {
-    // Set a mock session in localStorage or dispatch a mock event
-    console.log('Mock auth for:', user);
-  }, username);
+  // Click login button
+  const loginButton = page.getByRole('button', { name: /login with last\.fm/i });
+
+  // Start waiting for navigation before clicking
+  const responsePromise = page.waitForURL(/\//, { timeout: 10000 });
+
+  await loginButton.click();
+
+  // Wait for OAuth flow to complete (includes redirect to callback and back)
+  await responsePromise;
+
+  // Wait for app to process authentication
+  await page.waitForTimeout(1000);
+
+  // Verify authentication succeeded
+  const authenticated = await isAuthenticated(page);
+  if (!authenticated) {
+    throw new Error('Authentication failed - user not authenticated after OAuth flow');
+  }
+}
+
+/**
+ * Set up an authenticated context for testing
+ * Use this in beforeEach hooks to start with an authenticated state
+ *
+ * @param {import('@playwright/test').Page} page
+ * @param {string} username - Mock username
+ * @returns {Promise<void>}
+ */
+async function setupAuthenticatedContext(page, username = 'testuser') {
+  await page.goto('/');
+  await waitForAppReady(page);
+  await mockLastFmAuth(page, username);
 }
 
 /**
@@ -155,6 +189,7 @@ module.exports = {
   getRecentScrobbles,
   getErrorMessage,
   mockLastFmAuth,
+  setupAuthenticatedContext,
   waitForSessionState,
   clearAppState,
 };
