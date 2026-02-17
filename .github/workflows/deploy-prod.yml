@@ -71,33 +71,17 @@ jobs:
         run: |
           IMAGE="gcr.io/${{ env.GCP_PROJECT_ID }}/lasso:${{ github.sha }}"
           if gcloud container images describe $IMAGE &>/dev/null; then
-            echo "exists=true" >> $GITHUB_OUTPUT
-            echo "✅ Image already exists in GCR"
+            echo "✅ Image verified in GCR: $IMAGE"
           else
-            echo "exists=false" >> $GITHUB_OUTPUT
-            echo "ℹ️  Image not found, will build fresh"
+            echo "❌ Image not found in GCR: $IMAGE"
+            echo "The image must be published by CI before the release tag is created."
+            echo "Expected flow: release/** branch → CI publishes image → merge to main → release.yml creates tag → this workflow runs."
+            exit 1
           fi
 
-      - name: Build Docker image
-        if: steps.check-image.outputs.exists == 'false'
+      - name: Tag image with version and latest
         run: |
-          echo "🔨 Building Docker image for production..."
-          docker build -t gcr.io/${{ env.GCP_PROJECT_ID }}/lasso:${{ github.sha }} \
-                       -t gcr.io/${{ env.GCP_PROJECT_ID }}/lasso:${{ steps.version.outputs.version }} \
-                       -t gcr.io/${{ env.GCP_PROJECT_ID }}/lasso:latest .
-
-      - name: Push Docker image to GCR
-        if: steps.check-image.outputs.exists == 'false'
-        run: |
-          echo "📦 Pushing image to Google Container Registry..."
-          docker push gcr.io/${{ env.GCP_PROJECT_ID }}/lasso:${{ github.sha }}
-          docker push gcr.io/${{ env.GCP_PROJECT_ID }}/lasso:${{ steps.version.outputs.version }}
-          docker push gcr.io/${{ env.GCP_PROJECT_ID }}/lasso:latest
-
-      - name: Tag existing image with version
-        if: steps.check-image.outputs.exists == 'true'
-        run: |
-          echo "🏷️  Tagging existing image with version..."
+          echo "🏷️  Tagging image with version and latest..."
           gcloud container images add-tag \
             gcr.io/${{ env.GCP_PROJECT_ID }}/lasso:${{ github.sha }} \
             gcr.io/${{ env.GCP_PROJECT_ID }}/lasso:${{ steps.version.outputs.version }} \
