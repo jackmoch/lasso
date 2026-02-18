@@ -66,29 +66,23 @@ jobs:
       - name: Configure Docker for GCR
         run: gcloud auth configure-docker gcr.io
 
-      - name: Check if image exists
-        id: check-image
+      - name: Verify image exists
         run: |
-          IMAGE="gcr.io/${{ env.GCP_PROJECT_ID }}/lasso:${{ github.sha }}"
+          IMAGE="gcr.io/${{ env.GCP_PROJECT_ID }}/lasso:latest"
           if gcloud container images describe $IMAGE &>/dev/null; then
             echo "✅ Image verified in GCR: $IMAGE"
           else
             echo "❌ Image not found in GCR: $IMAGE"
-            echo "The image must be published by CI before the release tag is created."
-            echo "Expected flow: release/** branch → CI publishes image → merge to main → release.yml creates tag → this workflow runs."
+            echo "Ensure CI has run on main and published the :latest image."
             exit 1
           fi
 
-      - name: Tag image with version and latest
+      - name: Tag image with version
         run: |
-          echo "🏷️  Tagging image with version and latest..."
+          echo "🏷️  Tagging :latest image with version ${{ steps.version.outputs.version }}..."
           gcloud container images add-tag \
-            gcr.io/${{ env.GCP_PROJECT_ID }}/lasso:${{ github.sha }} \
-            gcr.io/${{ env.GCP_PROJECT_ID }}/lasso:${{ steps.version.outputs.version }} \
-            --quiet
-          gcloud container images add-tag \
-            gcr.io/${{ env.GCP_PROJECT_ID }}/lasso:${{ github.sha }} \
             gcr.io/${{ env.GCP_PROJECT_ID }}/lasso:latest \
+            gcr.io/${{ env.GCP_PROJECT_ID }}/lasso:${{ steps.version.outputs.version }} \
             --quiet
 
       - name: Get current revision (for rollback)
@@ -123,7 +117,7 @@ jobs:
           fi
 
           gcloud run deploy ${{ env.SERVICE_NAME }} \
-            --image gcr.io/${{ env.GCP_PROJECT_ID }}/lasso:${{ github.sha }} \
+            --image gcr.io/${{ env.GCP_PROJECT_ID }}/lasso:latest \
             --platform managed \
             --region ${{ env.GCP_REGION }} \
             --allow-unauthenticated \
@@ -253,7 +247,7 @@ jobs:
           echo "  Service: ${{ env.SERVICE_NAME }}"
           echo "  Region: ${{ env.GCP_REGION }}"
           echo "  Version: ${{ steps.version.outputs.version }}"
-          echo "  Image: gcr.io/${{ env.GCP_PROJECT_ID }}/lasso:${{ github.sha }}"
+          echo "  Image: gcr.io/${{ env.GCP_PROJECT_ID }}/lasso:${{ steps.version.outputs.version }}"
           echo "  Current Revision: ${{ steps.new-revision.outputs.revision }}"
           echo "  Previous Revision: ${{ steps.current-revision.outputs.revision }}"
           echo "  URL: ${{ steps.get-url.outputs.url }}"
@@ -288,7 +282,7 @@ jobs:
               body: releaseNotes + '\n\n' +
                     `## Deployment Information\n\n` +
                     `🌐 **Production URL:** ${url}\n` +
-                    `📦 **Image:** gcr.io/${{ env.GCP_PROJECT_ID }}/lasso:${{ github.sha }}\n` +
+                    `📦 **Image:** gcr.io/${{ env.GCP_PROJECT_ID }}/lasso:${{ steps.version.outputs.version }}\n` +
                     `🔖 **Revision:** \`${revision}\`\n` +
                     `🌍 **Region:** ${{ env.GCP_REGION }}\n\n` +
                     `✅ All smoke tests passed`
