@@ -121,6 +121,57 @@
     (store/delete-session "uuid-1")
     (is (= 1 (store/count-sessions)))))
 
+(deftest session-expired-test
+  (testing "fresh session is not expired"
+    (let [session (store/create-session "test-uuid" "testuser" "key")]
+      (is (not (store/session-expired? session)))))
+
+  (testing "session with last-activity beyond TTL is expired"
+    (let [far-past (- (System/currentTimeMillis) (* 25 60 60 1000)) ; 25 hours ago
+          session {:session-id "old" :last-activity far-past}]
+      (is (store/session-expired? session))))
+
+  (testing "session with recent last-activity is not expired"
+    (let [recent (- (System/currentTimeMillis) (* 1 60 60 1000)) ; 1 hour ago
+          session {:session-id "recent" :last-activity recent}]
+      (is (not (store/session-expired? session))))))
+
+(deftest get-session-expires-on-access-test
+  (testing "returns nil for an expired session and removes it from the store"
+    (store/create-session "test-uuid" "testuser" "key")
+    (let [far-past (- (System/currentTimeMillis) (* 25 60 60 1000))]
+      (store/update-session "test-uuid" #(assoc % :last-activity far-past)))
+    (is (nil? (store/get-session "test-uuid")))
+    (is (= 0 (store/count-sessions)))))
+
+(deftest cleanup-no-expired-sessions-test
+  (testing "returns 0 when no sessions are expired"
+    (store/create-session "uuid-1" "user1" "key1")
+    (is (= 0 (store/cleanup-expired-sessions!)))
+    (is (= 1 (store/count-sessions)))))
+
+(deftest cleanup-removes-expired-sessions-test
+  (testing "removes only expired sessions, leaving fresh ones intact"
+    (store/create-session "fresh" "user1" "key1")
+    (store/create-session "old" "user2" "key2")
+    (let [far-past (- (System/currentTimeMillis) (* 25 60 60 1000))]
+      (store/update-session "old" #(assoc % :last-activity far-past)))
+    (let [removed (store/cleanup-expired-sessions!)]
+      (is (= 1 removed))
+      (is (some? (store/get-session "fresh")))
+      (is (= 1 (store/count-sessions))))))
+
+(deftest cleanup-removes-multiple-expired-sessions-test
+  (testing "removes multiple expired sessions at once"
+    (store/create-session "old-1" "user1" "key1")
+    (store/create-session "old-2" "user2" "key2")
+    (let [far-past (- (System/currentTimeMillis) (* 25 60 60 1000))]
+      (store/update-session "old-1" #(assoc % :last-activity far-past))
+      (store/update-session "old-2" #(assoc % :last-activity far-past)))
+    (let [removed (store/cleanup-expired-sessions!)]
+      (is (= 2 removed))
+      (is (= 0 (store/count-sessions))))))
+
 (deftest concurrent-access-test
   (testing "Concurrent session creation"
     (let [futures (doall (map (fn [i]
