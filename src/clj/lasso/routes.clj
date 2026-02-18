@@ -57,9 +57,11 @@
      ["/css/*path" :get serve-css :route-name :serve-css]
      ["/js/*path" :get serve-js :route-name :serve-js]
 
-     ;; Authentication routes
-     ["/api/auth/init" :post auth-handlers/auth-init-handler :route-name :auth-init]
-     ["/api/auth/callback" :get auth-handlers/auth-callback-handler :route-name :auth-callback]
+     ;; Authentication routes — auth-rate-limit-interceptor is applied here (not
+     ;; globally) because these endpoints make upstream Last.fm API calls and need
+     ;; a tighter ceiling than the global 100/min. See AUTH_RATE_LIMIT_MAX_REQUESTS.
+     ["/api/auth/init" :post [security/auth-rate-limit-interceptor auth-handlers/auth-init-handler] :route-name :auth-init]
+     ["/api/auth/callback" :get [security/auth-rate-limit-interceptor auth-handlers/auth-callback-handler] :route-name :auth-callback]
      ["/api/auth/logout" :post [mw/require-auth auth-handlers/logout-handler] :route-name :auth-logout]
 
      ;; Session management routes (all require authentication)
