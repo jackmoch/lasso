@@ -1,6 +1,6 @@
 # What to Work On Next
 
-**Last Updated:** 2026-02-17 (Post v0.5.0 - Sprint 8 Complete)
+**Last Updated:** 2026-02-18 (Sprint 9 + Sprint 10 complete on develop)
 
 This file tells you exactly what to work on next. When you finish a task, update this file and commit it.
 
@@ -8,162 +8,89 @@ This file tells you exactly what to work on next. When you finish a task, update
 
 ## Immediate Next Task
 
-### 🎯 Sprint 9: Launch
+### 🎯 Cut v0.6.0 Release
 
-**Goal:** Deploy Lasso to production and make it available to users
+**Goal:** Ship the admin dashboard + monitoring + Sprint 9 completion to production
 
 **Current Status:**
-- ✅ Sprint 8 complete (25 E2E tests, deployment infrastructure ready)
-- ✅ All 181 tests passing (backend + frontend + E2E)
-- ✅ Docker build working, Cloud Run workflows configured
-- ✅ Security middleware in place (CORS, CSP, rate limiting)
-- ✅ Deployment infrastructure ready
-- 🎯 Need real GCP project credentials to complete deployment
+- ✅ Admin dashboard (Sprint 10) merged to develop
+- ✅ Monitoring & ops (Sprint 9 Phase 3) merged to develop
+- ✅ OAuth configured and working (production + staging)
+- ✅ Admin secrets deployed (GCP Secret Manager → Cloud Run)
+- ✅ Health check logs suppressed, per-route rate limiting added
+- ✅ All 197 tests passing (106 backend, 66 frontend, 25 E2E)
+- 📦 Ready to release as v0.6.0
 
-**Branch:** Create `feature/sprint-9-launch` from `develop`
+**Steps:**
 
----
+1. **Ensure develop is up to date:**
+   ```bash
+   git checkout develop
+   git pull origin develop
+   ```
 
-## Sprint 9 Tasks
+2. **Create release branch:**
+   ```bash
+   git checkout -b release/0.6.0
+   ```
 
-### Phase 1: GCP Setup & Staging Deployment (Priority)
+3. **Bump VERSION file:**
+   ```bash
+   echo "0.6.0" > VERSION
+   ```
 
-**Goal:** Configure real GCP infrastructure and deploy to staging
+4. **Update CHANGELOG.md:**
+   - Change `## [Unreleased]` → `## [0.6.0] - 2026-02-18`
+   - Add link at bottom: `[0.6.0]: https://github.com/jackmoch/lasso/compare/v0.5.1...v0.6.0`
+   - Update `[Unreleased]` link: `[Unreleased]: https://github.com/jackmoch/lasso/compare/v0.6.0...HEAD`
 
-**Tasks:**
-1. **GCP Project Setup**
-   - [ ] Create GCP project (or use existing)
-   - [ ] Enable Cloud Run, Container Registry APIs
-   - [ ] Create service account with appropriate roles
-   - [ ] Add secrets to GitHub: `GCP_PROJECT_ID`, `GCP_SA_KEY`, `GCP_REGION`
+5. **Commit and push:**
+   ```bash
+   git add VERSION CHANGELOG.md
+   git commit -m "chore(release): bump version to 0.6.0"
+   git push -u origin release/0.6.0
+   ```
 
-2. **Secrets Configuration**
-   - [ ] Add production secrets to GitHub repository:
-     - `LASTFM_API_KEY` - Real Last.fm API key
-     - `LASTFM_API_SECRET` - Real Last.fm API secret
-     - `LASTFM_CALLBACK_URL` - Production callback URL
-     - `SESSION_SECRET` - Random 32+ char secret
-   - [ ] Configure Cloud Run environment variables
+6. **Create PR to main:**
+   ```bash
+   gh pr create --base main --title "Release v0.6.0" --body "Sprint 9 (Launch) + Sprint 10 (Admin Dashboard) release"
+   ```
 
-3. **Staging Deployment**
-   - [ ] Trigger deploy-staging workflow
-   - [ ] Verify container starts successfully
-   - [ ] Test OAuth flow end-to-end with real Last.fm
-   - [ ] Smoke test all functionality
+7. **After PR merges:** GitHub Actions automatically creates the tag + release
 
-**Acceptance Criteria:**
-- App running on Cloud Run staging URL
-- Full OAuth flow working with real Last.fm credentials
-- Session start/pause/resume/stop all working
-- Scrobbles appearing correctly in Last.fm profile
-
-**Priority:** HIGH - Core sprint goal
-
----
-
-### Phase 2: Production Deployment
-
-**Goal:** Deploy to production and configure domain
-
-**Tasks:**
-1. **Production Configuration**
-   - [ ] Update OAuth callback URL to production domain
-   - [ ] Configure custom domain (if desired)
-   - [ ] Set up HTTPS (Cloud Run provides this automatically)
-   - [ ] Update CORS settings for production domain
-
-2. **Production Deployment**
-   - [ ] Trigger deploy-production workflow
-   - [ ] Verify production deployment
-   - [ ] Test complete user flow on production
-
-3. **DNS & Domain** (if applicable)
-   - [ ] Configure custom domain in Cloud Run
-   - [ ] Update Last.fm API application settings with production URL
+8. **Sync develop:**
+   ```bash
+   git checkout develop
+   git merge origin/main
+   git push origin develop
+   ```
 
 **Acceptance Criteria:**
-- App accessible at production URL
-- All functionality working in production
+- `v0.6.0` tag exists on main
+- GitHub release created with CHANGELOG notes
+- Production auto-deploys via `deploy-prod.yml`
 
 ---
 
-### Phase 3: Monitoring & Alerting
+## After v0.6.0 Ships
 
-**Goal:** Set up observability for production
+### End-to-End Smoke Test
 
-**Tasks:**
-1. **Cloud Logging**
-   - [ ] Verify application logs appear in Cloud Logging
-   - [ ] Create log-based metrics for key events (logins, sessions started)
-   - [ ] Set up log retention policy
+Verify the full user flow on production:
 
-2. **Uptime Monitoring**
-   - [ ] Configure Cloud Monitoring uptime checks
-   - [ ] Create alerting policy for downtime
-   - [ ] Set up notification channel (email, Slack, etc.)
+1. Visit `https://lasso.fm`
+2. Click "Login with Last.fm" → complete OAuth flow → confirm redirect back, logged in
+3. Enter a target username → Start session
+4. Wait ~20 seconds → confirm scrobbles appear in activity feed
+5. Pause, resume, stop the session
+6. Test admin console: visit `/admin/login` → login with admin credentials → view sessions → confirm they appear
 
-3. **Error Tracking** (optional)
-   - [ ] Evaluate Sentry or Cloud Error Reporting
-   - [ ] Configure error alerts
+### Admin Console Access
 
-**Acceptance Criteria:**
-- Logs visible in Cloud Logging
-- Uptime monitoring active with alerting
-- On-call runbook created
-
----
-
-### Phase 4: Documentation & Launch
-
-**Goal:** Prepare for public launch
-
-**Tasks:**
-1. **User Documentation**
-   - [ ] Create user guide explaining how to use Lasso
-   - [ ] FAQ page (why scrobbles are delayed, what "following" means)
-   - [ ] Troubleshooting guide for common user issues
-
-2. **README Update**
-   - [ ] Update README with public-facing description
-   - [ ] Add screenshots of the application
-   - [ ] Add link to live application
-
-3. **Launch Announcement**
-   - [ ] Write launch announcement (blog post, social media, etc.)
-
-**Acceptance Criteria:**
-- User guide complete
-- README polished for public viewers
-- Ready to share with users
-
----
-
-## GitHub Secrets Needed for Deployment
-
-To complete Sprint 9, the following GitHub repository secrets must be configured:
-
-**GCP Credentials:**
-```
-GCP_PROJECT_ID       - Your GCP project ID
-GCP_SA_KEY           - Service account key JSON (base64 encoded)
-GCP_REGION           - Cloud Run region (e.g., us-central1)
-```
-
-**Application Secrets:**
-```
-LASTFM_API_KEY       - Last.fm API key from https://www.last.fm/api/account/create
-LASTFM_API_SECRET    - Last.fm API secret
-LASTFM_CALLBACK_URL  - https://your-cloud-run-url/api/auth/callback
-SESSION_SECRET       - Random 32+ character string
-```
-
-**Setting up in GitHub:**
-```bash
-# Using gh CLI
-gh secret set GCP_PROJECT_ID --body "your-project-id"
-gh secret set LASTFM_API_KEY --body "your-api-key"
-# etc.
-```
+Admin credentials are in GCP Secret Manager:
+- **Username:** `admin`
+- **Password:** stored in `admin-password` secret in GCP Secret Manager (project: `lasso-scrobbler-0667`)
+- **URL:** `https://lasso.fm/admin/login`
 
 ---
 
@@ -174,7 +101,6 @@ These features can be tackled post-launch:
 - **Manual Backfill Feature**
   - Allow users to manually select recent scrobbles to backfill
   - Show preview of target user's last 10 scrobbles before starting session
-  - **Defer to post-launch enhancement**
 
 - **Enhanced Error Messages**
   - Better messaging for invalid/non-existent usernames
@@ -184,56 +110,50 @@ These features can be tackled post-launch:
   - Migrate from in-memory atom to Redis
   - Enables multi-instance deployment and session persistence across restarts
 
-- **Mobile App** (Far future)
-  - Native iOS/Android apps
-  - Push notifications for new scrobbles
+- **Session Detail View** (Admin)
+  - Drill into a single session's full recent-scrobbles list
+  - Track Last.fm API error rates per session
+
+- **Log-Based Metrics**
+  - Track login events, session starts, scrobble counts in Cloud Monitoring
+
+- **User Guide**
+  - Simple in-app or docs page explaining Lasso for non-technical users
+  - What "following" means, why scrobbles are delayed, how to stop
 
 ---
 
-## How to Get Started
+## Reference
 
-### Starting Sprint 9
+**Cloud Run URLs:**
+- Production: `https://lasso-ngqcsb2bpa-uc.a.run.app` (also `https://lasso.fm`)
+- Staging: `https://lasso-staging-ngqcsb2bpa-uc.a.run.app`
 
+**GCP Project:** `lasso-scrobbler-0667`, region `us-central1`
+
+**Useful commands:**
 ```bash
-# 1. Ensure you're on develop with latest changes
-git checkout develop
-git pull origin develop
+# Check prod health
+curl https://lasso-ngqcsb2bpa-uc.a.run.app/health
 
-# 2. Create sprint branch
-git checkout -b feature/sprint-9-launch
+# Update env var without full redeploy
+gcloud run services update lasso \
+  --region us-central1 \
+  --update-env-vars KEY=VALUE
 
-# 3. Configure GitHub secrets (see above)
+# View recent logs
+gcloud run services logs read lasso --region us-central1 --limit 50
 
-# 4. Test staging deployment
-# (after secrets are configured, push to trigger CI)
+# Trigger production deploy manually
+gh workflow run deploy-prod.yml --ref main --field version=v0.6.0
 ```
-
----
-
-## Success Criteria for v0.6.0 Release
-
-Sprint 9 complete when:
-- ✅ App deployed to production Cloud Run
-- ✅ Full OAuth flow working with real Last.fm API
-- ✅ Monitoring and logging operational
-- ✅ User documentation complete
-- ✅ Ready for public use
-
-**Expected Timeline:** 1-2 weeks (mostly GCP setup and testing)
-
-**Next Release:** v0.6.0 (Sprint 9 complete, production launched)
 
 ---
 
 ## Questions or Blockers?
 
-If you encounter issues or have questions:
+If you encounter issues:
 1. Check `MEMORY.md` for known gotchas
 2. Check `docs/deployment/` for deployment guides
-3. Check `docs/testing/` for testing guides
-4. Review CI workflow logs for deployment failures
-5. Check GCP Console for Cloud Run logs
-
----
-
-**Remember:** Sprint 9 is the finish line! The application is code-complete and tested. The main work is infrastructure configuration and validation. Take time to verify everything works correctly in staging before promoting to production. 🚀
+3. Review CI workflow logs: `gh run list --branch main`
+4. Check GCP Console → Cloud Run → lasso → Logs

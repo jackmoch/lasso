@@ -82,6 +82,21 @@
 
 (def request-counts (atom {}))  ; {ip-address {minute-bucket request-count}}
 
+(defn extract-client-ip
+  "Extract the real client IP from request headers.
+   Cloud Run (and trusted reverse proxies) append the connecting client's IP
+   as the last entry in X-Forwarded-For. Taking the last entry prevents
+   rate limit bypass via header spoofing — an attacker can prepend fake IPs
+   but cannot forge the final entry added by the trusted proxy."
+  [request]
+  (if-let [forwarded-for (get-in request [:headers "x-forwarded-for"])]
+    (-> forwarded-for
+        (str/split #",")
+        last
+        str/trim)
+    (or (get-in request [:headers "x-real-ip"])
+        (:remote-addr request))))
+
 (defn current-minute-bucket
   "Get current minute bucket for rate limiting (e.g., 2026-02-13T16:45)."
   []
@@ -124,9 +139,7 @@
              (let [enabled (= (config/get-env "RATE_LIMIT_ENABLED" "true") "true")
                    max-requests (Integer/parseInt (config/get-env "RATE_LIMIT_MAX_REQUESTS" "100"))
                    request (:request context)
-                   ip-address (or (get-in request [:headers "x-forwarded-for"])
-                                 (get-in request [:headers "x-real-ip"])
-                                 (:remote-addr request))]
+                   ip-address (extract-client-ip request)]
 
                (if enabled
                  (do
@@ -156,22 +169,26 @@
 ;; Request Logging (Security Audit Trail)
 ;; =============================================================================
 
+(def ^:private log-suppressed-uris
+  "URIs excluded from request logging. Health checks are high-frequency,
+   always-200 probes from the monitoring infrastructure — logging them
+   produces noise without any actionable signal."
+  #{"/health"})
+
 (def request-logging-interceptor
-  "Log requests for security audit trail in production."
+  "Log requests for security audit trail in production.
+   Health check probes are suppressed — see log-suppressed-uris."
   (interceptor
    {:name ::request-logging
     :enter (fn [context]
              (let [request (:request context)
-                   method (:request-method request)
-                   uri (:uri request)
-                   ip (or (get-in request [:headers "x-forwarded-for"])
-                         (:remote-addr request))
-                   user-agent (get-in request [:headers "user-agent"])]
-               (log/info "Request"
-                        :method method
-                        :uri uri
-                        :ip ip
-                        :user-agent user-agent)
+                   uri (:uri request)]
+               (when-not (contains? log-suppressed-uris uri)
+                 (log/info "Request"
+                           :method (:request-method request)
+                           :uri uri
+                           :ip (extract-client-ip request)
+                           :user-agent (get-in request [:headers "user-agent"])))
                context))
     :leave (fn [context]
              (let [status (get-in context [:response :status])]
@@ -180,6 +197,67 @@
                           :status status
                           :uri (get-in context [:request :uri])))
                context))}))
+
+;; =============================================================================
+;; Auth Endpoint Rate Limiting
+;; =============================================================================
+
+;; A separate counter from the global rate limiter so auth limits are tracked
+;; independently — a flood of auth attempts won't consume the global budget,
+;; and we can enforce a much tighter ceiling on these specific endpoints.
+(def ^:private auth-request-counts (atom {}))
+
+(defn- get-auth-request-count [ip-address]
+  (get-in @auth-request-counts [ip-address (current-minute-bucket)] 0))
+
+(defn- increment-auth-request-count! [ip-address]
+  (swap! auth-request-counts update-in [ip-address (current-minute-bucket)] (fnil inc 0)))
+
+(defn reset-auth-rate-limit-counts!
+  "Reset auth rate limit counters. For testing use only."
+  []
+  (reset! auth-request-counts {}))
+
+(def auth-rate-limit-interceptor
+  "Stricter per-route rate limit for authentication endpoints.
+   /api/auth/init and /api/auth/callback each trigger upstream Last.fm API
+   calls, so a tighter ceiling prevents abuse and protects Last.fm quota.
+
+   Controlled by AUTH_RATE_LIMIT_MAX_REQUESTS env var (default: 10/min per IP).
+   Respects the global RATE_LIMIT_ENABLED flag."
+  (interceptor
+   {:name ::auth-rate-limit
+    :enter (fn [context]
+             (let [enabled (= (config/get-env "RATE_LIMIT_ENABLED" "true") "true")
+                   max-requests (Integer/parseInt
+                                 (config/get-env "AUTH_RATE_LIMIT_MAX_REQUESTS" "10"))
+                   request (:request context)
+                   ip-address (extract-client-ip request)]
+               (if enabled
+                 (do
+                   ;; Periodically sweep old minute buckets
+                   (when (zero? (rand-int 100))
+                     (let [cutoff (- (current-minute-bucket) 2)]
+                       (swap! auth-request-counts
+                              (fn [counts]
+                                (into {}
+                                      (map (fn [[ip buckets]]
+                                             [ip (into {} (filter #(> (key %) cutoff) buckets))])
+                                           counts))))))
+                   (let [current-count (get-auth-request-count ip-address)]
+                     (if (>= current-count max-requests)
+                       (do
+                         (log/warn "Auth rate limit exceeded for IP:" ip-address
+                                   "count:" current-count)
+                         (assoc context :response
+                                {:status 429
+                                 :headers {"Content-Type" "application/json"
+                                           "Retry-After" "60"}
+                                 :body "{\"error\": \"Too many requests. Please try again later.\"}"}))
+                       (do
+                         (increment-auth-request-count! ip-address)
+                         context))))
+                 context)))}))
 
 ;; =============================================================================
 ;; Sensitive Data Filtering

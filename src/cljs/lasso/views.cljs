@@ -4,7 +4,9 @@
             [lasso.components.auth :as auth]
             [lasso.components.session-controls :as session-controls]
             [lasso.components.activity-feed :as activity-feed]
-            [lasso.components.error :as error]))
+            [lasso.components.error :as error]
+            [lasso.components.how-it-works :as how-it-works]
+            [lasso.admin.views :as admin-views]))
 
 (defn navbar
   "Application navbar with title and tagline."
@@ -24,8 +26,8 @@
     [:div.inline-block.animate-spin.rounded-full.h-12.w-12.border-b-2.border-red-500]
     [:p.mt-4.text-gray-600 "Loading..."]]])
 
-(defn main-panel
-  "Main application panel component."
+(defn home-panel
+  "Main home page panel."
   []
   (fn []
     (js/console.log "🎨 MAIN-PANEL RENDER")
@@ -38,5 +40,18 @@
          [:div.max-w-4xl.mx-auto.px-4.pb-8
           [error/error-display]
           [auth/auth-component]
+          (when-not @(rf/subscribe [:auth/authenticated?])
+            [how-it-works/how-it-works])
           [session-controls/session-controls]
           [activity-feed/activity-feed]]]))))
+
+(defn main-panel
+  "Root component — delegates to the correct view based on current route."
+  []
+  (fn []
+    (let [route @(rf/subscribe [:current-route])
+          route-name (get-in route [:data :name])]
+      (case route-name
+        :admin/login [admin-views/login-page]
+        :admin       [admin-views/dashboard]
+        [home-panel]))))

@@ -5,8 +5,10 @@
             [clojure.data.json :as json]
             [lasso.auth.handlers :as auth-handlers]
             [lasso.session.handlers :as session-handlers]
+            [lasso.admin.handlers :as admin-handlers]
             [lasso.middleware :as mw]
-            [lasso.middleware.security :as security]))
+            [lasso.middleware.security :as security]
+            [lasso.middleware.admin :as admin-mw]))
 
 (defn home-page
   "Serve the main application page."
@@ -57,9 +59,11 @@
      ["/css/*path" :get serve-css :route-name :serve-css]
      ["/js/*path" :get serve-js :route-name :serve-js]
 
-     ;; Authentication routes
-     ["/api/auth/init" :post auth-handlers/auth-init-handler :route-name :auth-init]
-     ["/api/auth/callback" :get auth-handlers/auth-callback-handler :route-name :auth-callback]
+     ;; Authentication routes — auth-rate-limit-interceptor is applied here (not
+     ;; globally) because these endpoints make upstream Last.fm API calls and need
+     ;; a tighter ceiling than the global 100/min. See AUTH_RATE_LIMIT_MAX_REQUESTS.
+     ["/api/auth/init" :post [security/auth-rate-limit-interceptor auth-handlers/auth-init-handler] :route-name :auth-init]
+     ["/api/auth/callback" :get [security/auth-rate-limit-interceptor auth-handlers/auth-callback-handler] :route-name :auth-callback]
      ["/api/auth/logout" :post [mw/require-auth auth-handlers/logout-handler] :route-name :auth-logout]
 
      ;; Session management routes (all require authentication)
@@ -67,4 +71,10 @@
      ["/api/session/pause" :post [mw/require-auth session-handlers/pause-session-handler] :route-name :session-pause]
      ["/api/session/resume" :post [mw/require-auth session-handlers/resume-session-handler] :route-name :session-resume]
      ["/api/session/stop" :post [mw/require-auth session-handlers/stop-session-handler] :route-name :session-stop]
-     ["/api/session/status" :get [mw/require-auth session-handlers/status-handler] :route-name :session-status]}))
+     ["/api/session/status" :get [mw/require-auth session-handlers/status-handler] :route-name :session-status]
+
+     ;; Admin routes — use separate admin-session cookie, not user session
+     ["/api/admin/login" :post admin-handlers/login-handler :route-name :admin-login]
+     ["/api/admin/logout" :post [admin-mw/require-admin-auth admin-handlers/logout-handler] :route-name :admin-logout]
+     ["/api/admin/status" :get [admin-mw/require-admin-auth admin-handlers/status-handler] :route-name :admin-status]
+     ["/api/admin/sessions/:session-id" :delete [admin-mw/require-admin-auth admin-handlers/force-stop-handler] :route-name :admin-force-stop]}))
