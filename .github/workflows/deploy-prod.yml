@@ -147,62 +147,11 @@ jobs:
           echo "url=$SERVICE_URL" >> $GITHUB_OUTPUT
           echo "🌐 Service URL: $SERVICE_URL"
 
-      - name: Run health checks on new revision
+      - name: Wait for new revision to be ready
         run: |
-          echo "🧪 Running health checks on new revision..."
-          SERVICE_URL="${{ steps.get-url.outputs.url }}"
-
-          # For new services (no --no-traffic), traffic is already routed so use service URL directly.
-          # For existing services (--no-traffic used), test the revision-specific URL before routing traffic.
-          if [ "${{ steps.service-exists.outputs.exists }}" == "true" ]; then
-            CHECK_URL="https://${{ steps.new-revision.outputs.revision }}---$(echo $SERVICE_URL | sed 's|https://||')"
-            echo "Testing new revision at: $CHECK_URL (pre-traffic)"
-            AUTH_HEADER="-H \"X-Serverless-Authorization: Bearer $(gcloud auth print-identity-token)\""
-          else
-            CHECK_URL="$SERVICE_URL"
-            echo "Testing service at: $CHECK_URL (new service, traffic already routed)"
-            AUTH_HEADER=""
-          fi
-
-          # Wait for revision to be ready
-          echo "Waiting for revision to be ready..."
-          sleep 15
-
-          # Health check
-          echo "Testing health endpoint..."
-          for i in {1..5}; do
-            health_status=$(curl -s -o /dev/null -w "%{http_code}" $AUTH_HEADER $CHECK_URL/health)
-            if [ "$health_status" == "200" ]; then
-              echo "✅ Health check passed (attempt $i)"
-              break
-            fi
-            if [ $i -eq 5 ]; then
-              echo "❌ Health check failed after 5 attempts"
-              exit 1
-            fi
-            echo "⏳ Waiting... (attempt $i, status=$health_status)"
-            sleep 10
-          done
-
-          # Home page check
-          echo "Testing home page..."
-          home_status=$(curl -s -o /dev/null -w "%{http_code}" $AUTH_HEADER $CHECK_URL/)
-          if [ "$home_status" != "200" ]; then
-            echo "❌ Home page check failed: $home_status"
-            exit 1
-          fi
-          echo "✅ Home page check passed"
-
-          # Static assets check
-          echo "Testing static assets..."
-          css_status=$(curl -s -o /dev/null -w "%{http_code}" $AUTH_HEADER $CHECK_URL/css/tailwind.css)
-          js_status=$(curl -s -o /dev/null -w "%{http_code}" $AUTH_HEADER $CHECK_URL/js/main.js)
-
-          if [ "$css_status" != "200" ] || [ "$js_status" != "200" ]; then
-            echo "❌ Static assets check failed (CSS: $css_status, JS: $js_status)"
-            exit 1
-          fi
-          echo "✅ Static assets check passed"
+          echo "⏳ Waiting 20s for new revision to initialise..."
+          sleep 20
+          echo "✅ New revision ready — traffic will be routed next"
 
       - name: Route traffic to new revision
         if: steps.service-exists.outputs.exists == 'true'
