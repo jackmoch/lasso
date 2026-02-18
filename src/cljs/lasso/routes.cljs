@@ -6,6 +6,8 @@
 
 (def routes
   [["/" {:name :home}]
+   ["/profile" {:name        :profile
+                :controllers [{:start #(rfx/dispatch [:user/fetch-profile])}]}]
    ["/admin/login" {:name :admin/login}]
    ["/admin" {:name :admin}]])
 

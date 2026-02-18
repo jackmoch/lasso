@@ -3,36 +3,65 @@
   (:require [io.pedestal.interceptor :as interceptor]
             [lasso.auth.session :as auth-session]
             [lasso.util.http :as http]
-            [lasso.session.store :as store]))
+            [lasso.util.crypto :as crypto]
+            [lasso.session.store :as store]
+            [lasso.user.remember :as remember]
+            [lasso.config :as config]))
 
 (def require-auth
   "Interceptor that requires a valid session cookie.
-   Validates the session exists and is active, then attaches session data to context.
-   Returns 401 Unauthorized if:
-   - No session cookie present
-   - Session ID is invalid or expired
-   - Session not found in store"
+   Primary path: checks session-id cookie → in-memory store.
+   Fallback path: checks lasso-remember cookie → Firestore → restores session.
+   Returns 401 if neither is valid.
+   Sets a fresh session-id cookie in the response when restoring from remember-me."
   (interceptor/interceptor
    {:name ::require-auth
     :enter (fn [context]
-             (let [request (:request context)
+             (let [request    (:request context)
                    session-id (http/parse-cookie request "session-id")]
-               (if session-id
-                 (if-let [session (store/get-session session-id)]
-                   ;; Session found - attach to request and update last activity
-                   (do
-                     (auth-session/touch session-id)
-                     (assoc-in context [:request :session] session))
-                   ;; Session not found
-                   (assoc context :response
-                          (http/error-response "Session not found or expired"
-                                               :status 401
-                                               :error-code "SESSION_EXPIRED")))
-                 ;; No session cookie
-                 (assoc context :response
-                        (http/error-response "Authentication required"
-                                             :status 401
-                                             :error-code "AUTH_REQUIRED")))))}))
+               (if-let [session (and session-id (store/get-session session-id))]
+                 ;; Valid session-id — attach to request and touch activity
+                 (do
+                   (auth-session/touch session-id)
+                   (assoc-in context [:request :session] session))
+                 ;; No valid session-id — try remember-me fallback
+                 (let [remember-token (http/parse-cookie request "lasso-remember")
+                       user           (remember/lookup-token remember-token)]
+                   (if user
+                     ;; Remember-me valid — restore session from Firestore data
+                     (let [secret    (get-in config/config [:session :secret])
+                           plain-key (crypto/decrypt (:encrypted_session_key user) secret)
+                           {:keys [session-id session-data]}
+                           (let [r (auth-session/create-session (:username user) plain-key)]
+                             {:session-id   (:session-id r)
+                              :session-data (:session-data r)})]
+                       (-> context
+                           (assoc-in [:request :session] session-data)
+                           ;; Store new session-id so :leave can set the cookie
+                           (assoc ::new-session-id session-id)))
+                     ;; No valid remember-me — 401
+                     (assoc context :response
+                            (http/error-response "Authentication required"
+                                                 :status 401
+                                                 :error-code "AUTH_REQUIRED")))))))
+
+    :leave (fn [context]
+             ;; If we restored from remember-me, set fresh session-id cookie
+             (if-let [new-id (::new-session-id context)]
+               (let [is-prod? (= :production (:environment config/config))
+                     cookie   (http/cookie-string "session-id" new-id
+                                                  :max-age (* 60 60 24 7)
+                                                  :path "/"
+                                                  :http-only true
+                                                  :secure is-prod?
+                                                  :same-site "Lax")]
+                 (update-in context [:response :headers "Set-Cookie"]
+                            (fn [existing]
+                              (cond
+                                (vector? existing) (conj existing cookie)
+                                existing           [existing cookie]
+                                :else              cookie))))
+               context))}))
 
 (defn get-session
   "Extract session data from request (attached by require-auth interceptor).

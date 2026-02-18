@@ -4,6 +4,7 @@
             [lasso.config :as config]
             [lasso.session.store :as store]
             [lasso.polling.scheduler :as scheduler]
+            [lasso.user.store :as user-store]
             [lasso.util.http :as http]
             [clojure.data.json :as json]
             [taoensso.timbre :as log])
@@ -158,8 +159,16 @@
   [request]
   (try
     (let [target-session-id (get-in request [:path-params :session-id])]
-      (if (store/get-session target-session-id)
+      (if-let [target-session (store/get-session target-session-id)]
         (do
+          ;; Finish Firestore record before stopping
+          (let [following (:following-session target-session)]
+            (when following
+              (user-store/finish-session-record
+               (:username target-session)
+               (:fs-session-id following)
+               (or (:scrobble-count following) 0)
+               "stopped")))
           ;; Stop poller first, then delete session
           (scheduler/stop-poller target-session-id)
           (store/delete-session target-session-id)

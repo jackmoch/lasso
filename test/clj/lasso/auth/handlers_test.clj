@@ -116,8 +116,11 @@
           body (parse-json-body response)]
       (is (= 200 (:status response)))
       (is (true? (:success body)))
-      ;; Verify cookie is cleared (max-age=0)
-      (is (.contains (get-in response [:headers "Set-Cookie"]) "Max-Age=0"))
+      ;; Verify session-id cookie is cleared (max-age=0)
+      (is (let [v (get-in response [:headers "Set-Cookie"])]
+            (if (vector? v)
+              (some #(.contains % "Max-Age=0") v)
+              (.contains v "Max-Age=0"))))
       ;; Verify session was destroyed
       (is (nil? (store/get-session session-id)))))
 

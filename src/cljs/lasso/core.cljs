@@ -8,6 +8,8 @@
             [lasso.subs]
             [lasso.admin.subs]
             [lasso.admin.events]
+            [lasso.user.subs]
+            [lasso.user.events]
             [lasso.routes :as routes]
             [lasso.views :as views]))
 

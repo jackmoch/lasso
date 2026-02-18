@@ -9,6 +9,7 @@
             [lasso.routes :as routes]
             [lasso.middleware.security :as security]
             [lasso.session.store :as store]
+            [lasso.firestore.client :as firestore]
             [taoensso.timbre :as log])
   (:gen-class))
 
@@ -94,4 +95,5 @@
   "Application entry point."
   [& _args]
   (log/info "Starting Lasso application...")
+  (firestore/init!)
   (start))
