@@ -100,10 +100,28 @@ jobs:
           echo "revision=$CURRENT_REVISION" >> $GITHUB_OUTPUT
           echo "📋 Current revision: $CURRENT_REVISION"
 
+      - name: Check if service exists
+        id: service-exists
+        run: |
+          if gcloud run services describe ${{ env.SERVICE_NAME }} \
+            --region ${{ env.GCP_REGION }} &>/dev/null 2>&1; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "📋 Service exists, will use --no-traffic for zero-downtime deploy"
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "📋 New service, will deploy with traffic immediately"
+          fi
+
       - name: Deploy to Cloud Run (Production)
         id: deploy
         run: |
           echo "🚀 Deploying to Cloud Run production environment..."
+
+          NO_TRAFFIC_FLAG=""
+          if [ "${{ steps.service-exists.outputs.exists }}" == "true" ]; then
+            NO_TRAFFIC_FLAG="--no-traffic"
+          fi
+
           gcloud run deploy ${{ env.SERVICE_NAME }} \
             --image gcr.io/${{ env.GCP_PROJECT_ID }}/lasso:${{ github.sha }} \
             --platform managed \
@@ -115,7 +133,7 @@ jobs:
             --min-instances 1 \
             --set-env-vars ENVIRONMENT=${{ env.ENVIRONMENT }},LASTFM_API_BASE_URL=https://ws.audioscrobbler.com,LASTFM_AUTH_URL=https://www.last.fm,LOG_LEVEL=info,OAUTH_CALLBACK_URL=${{ secrets.OAUTH_CALLBACK_URL }} \
             --set-secrets LASTFM_API_KEY=lastfm-api-key:latest,LASTFM_API_SECRET=lastfm-api-secret:latest,SESSION_SECRET=session-secret:latest \
-            --no-traffic  # Deploy without routing traffic initially
+            $NO_TRAFFIC_FLAG
 
       - name: Get new revision name
         id: new-revision
@@ -139,20 +157,27 @@ jobs:
         run: |
           echo "🧪 Running health checks on new revision..."
           SERVICE_URL="${{ steps.get-url.outputs.url }}"
-          REVISION_URL="https://${{ steps.new-revision.outputs.revision }}---$(echo $SERVICE_URL | sed 's|https://||')"
 
-          echo "Testing new revision at: $REVISION_URL"
+          # For new services (no --no-traffic), traffic is already routed so use service URL directly.
+          # For existing services (--no-traffic used), test the revision-specific URL before routing traffic.
+          if [ "${{ steps.service-exists.outputs.exists }}" == "true" ]; then
+            CHECK_URL="https://${{ steps.new-revision.outputs.revision }}---$(echo $SERVICE_URL | sed 's|https://||')"
+            echo "Testing new revision at: $CHECK_URL (pre-traffic)"
+            AUTH_HEADER="-H \"X-Serverless-Authorization: Bearer $(gcloud auth print-identity-token)\""
+          else
+            CHECK_URL="$SERVICE_URL"
+            echo "Testing service at: $CHECK_URL (new service, traffic already routed)"
+            AUTH_HEADER=""
+          fi
 
           # Wait for revision to be ready
           echo "Waiting for revision to be ready..."
-          sleep 10
+          sleep 15
 
           # Health check
           echo "Testing health endpoint..."
           for i in {1..5}; do
-            health_status=$(curl -s -o /dev/null -w "%{http_code}" \
-              -H "X-Serverless-Authorization: Bearer $(gcloud auth print-identity-token)" \
-              $REVISION_URL/health)
+            health_status=$(curl -s -o /dev/null -w "%{http_code}" $AUTH_HEADER $CHECK_URL/health)
             if [ "$health_status" == "200" ]; then
               echo "✅ Health check passed (attempt $i)"
               break
@@ -161,15 +186,13 @@ jobs:
               echo "❌ Health check failed after 5 attempts"
               exit 1
             fi
-            echo "⏳ Waiting... (attempt $i)"
-            sleep 5
+            echo "⏳ Waiting... (attempt $i, status=$health_status)"
+            sleep 10
           done
 
           # Home page check
           echo "Testing home page..."
-          home_status=$(curl -s -o /dev/null -w "%{http_code}" \
-            -H "X-Serverless-Authorization: Bearer $(gcloud auth print-identity-token)" \
-            $REVISION_URL/)
+          home_status=$(curl -s -o /dev/null -w "%{http_code}" $AUTH_HEADER $CHECK_URL/)
           if [ "$home_status" != "200" ]; then
             echo "❌ Home page check failed: $home_status"
             exit 1
@@ -178,12 +201,8 @@ jobs:
 
           # Static assets check
           echo "Testing static assets..."
-          css_status=$(curl -s -o /dev/null -w "%{http_code}" \
-            -H "X-Serverless-Authorization: Bearer $(gcloud auth print-identity-token)" \
-            $REVISION_URL/css/tailwind.css)
-          js_status=$(curl -s -o /dev/null -w "%{http_code}" \
-            -H "X-Serverless-Authorization: Bearer $(gcloud auth print-identity-token)" \
-            $REVISION_URL/js/main.js)
+          css_status=$(curl -s -o /dev/null -w "%{http_code}" $AUTH_HEADER $CHECK_URL/css/tailwind.css)
+          js_status=$(curl -s -o /dev/null -w "%{http_code}" $AUTH_HEADER $CHECK_URL/js/main.js)
 
           if [ "$css_status" != "200" ] || [ "$js_status" != "200" ]; then
             echo "❌ Static assets check failed (CSS: $css_status, JS: $js_status)"
@@ -192,6 +211,7 @@ jobs:
           echo "✅ Static assets check passed"
 
       - name: Route traffic to new revision
+        if: steps.service-exists.outputs.exists == 'true'
         run: |
           echo "🔀 Routing 100% traffic to new revision..."
           gcloud run services update-traffic ${{ env.SERVICE_NAME }} \
