@@ -6,6 +6,7 @@
             [lasso.util.crypto :as crypto]
             [lasso.session.store :as store]
             [lasso.user.remember :as remember]
+            [lasso.user.store :as user-store]
             [lasso.config :as config]))
 
 (def require-auth
@@ -35,6 +36,9 @@
                            (let [r (auth-session/create-session (:username user) plain-key)]
                              {:session-id   (:session-id r)
                               :session-data (:session-data r)})]
+                       ;; Re-upsert user to keep last_seen current and create the doc
+                       ;; if the initial OAuth write failed (e.g. IAM not yet propagated)
+                       (user-store/upsert-user (:username user) (:encrypted_session_key user))
                        (-> context
                            (assoc-in [:request :session] session-data)
                            ;; Store new session-id so :leave can set the cookie

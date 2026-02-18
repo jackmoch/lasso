@@ -158,8 +158,16 @@
   (with-redefs [fs/enabled? (fn [] false)]
     (is (nil? (user-store/get-user-profile "alice")))))
 
-(deftest get-user-profile-returns-nil-for-unknown-user
+(deftest get-user-profile-returns-empty-profile-for-unknown-user
+  ;; get-user-profile no longer returns nil for unknown users — it returns a
+  ;; profile map with nil fields so sessions are still shown even if the user
+  ;; doc was never written (e.g. Firestore unavailable during first login).
   (let [mocks (make-fs-mocks)]
-    (with-redefs [fs/enabled? (:enabled? mocks)
-                  fs/get-doc  (:get-doc mocks)]
-      (is (nil? (user-store/get-user-profile "unknown-user"))))))
+    (with-redefs [fs/enabled?              (:enabled? mocks)
+                  fs/get-doc               (:get-doc mocks)
+                  fs/query-subcollection   (fn [_ _] [])]
+      (let [profile (user-store/get-user-profile "unknown-user")]
+        (is (= "unknown-user" (:username profile)))
+        (is (nil? (:first_seen profile)))
+        (is (= 0 (:total_scrobbles profile)))
+        (is (= [] (:sessions profile)))))))
