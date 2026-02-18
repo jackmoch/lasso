@@ -1,19 +1,19 @@
 # Project Status
 
 **Last Updated:** 2026-02-18
-**Current Sprint:** Sprint 9 (Launch - In Progress)
+**Current Sprint:** Sprint 9 (Launch) + Sprint 10 (Admin Dashboard) — Complete (awaiting v0.6.0 release)
 **Project Phase:** Live (Production Deployed)
 
 ---
 
 ## Quick Status
 
-- **Version:** v0.5.1 (2026-02-18)
-- **Main Branch:** v0.5.1 (production deployed)
-- **Develop Branch:** v0.5.1 + CI/CD fixes (synced with main)
-- **Active Work:** Sprint 9 - OAuth configuration + monitoring
-- **Blockers:** `OAUTH_CALLBACK_URL` not yet configured → OAuth login won't work until set
-- **Next Milestone:** OAuth working end-to-end on production
+- **Version:** v0.5.1 (production) → next: v0.6.0
+- **Main Branch:** v0.5.1 (production deployed, live at lasso.fm)
+- **Develop Branch:** v0.5.1 + admin dashboard + monitoring ops + health-check log suppression
+- **Active Work:** All sprint work merged to develop; ready for v0.6.0 release
+- **Blockers:** None — OAuth configured, admin secrets deployed, monitoring active
+- **Next Milestone:** v0.6.0 release (cut release branch, bump VERSION, PR to main)
 
 ---
 
@@ -127,9 +127,9 @@
 - [x] CORS in `:leave` phase for all responses
 - [x] CSP environment-aware (relaxed in dev, strict in prod)
 
-### Sprint 9: Launch - Phase 1 ✅ (v0.5.1, 2026-02-18)
+### Sprint 9: Launch ✅ (v0.5.1, 2026-02-18)
 
-**CI/CD Pipeline Fixes:**
+**Phase 1 — CI/CD Pipeline Fixes:**
 - [x] Pass `OAUTH_CALLBACK_URL` env var to Cloud Run in all deploy stages
 - [x] Staging IAM propagation: 15s wait + 5-attempt health check retry
 - [x] Post-deployment comment: `continue-on-error` (no PR context on push)
@@ -137,58 +137,85 @@
 - [x] `deploy-prod.yml`: handle first-time service creation (`--no-traffic` not valid on new services)
 - [x] `deploy-prod.yml`: use `:latest` image tag (removes SHA coupling between commits)
 
+**Phase 2 — OAuth & Production Config:**
+- [x] OAuth callback URL registered with Last.fm (`https://lasso.fm/api/auth/callback`)
+- [x] `OAUTH_CALLBACK_URL` set in production GitHub Environment (`https://lasso.fm/api/auth/callback`)
+- [x] `OAUTH_CALLBACK_URL` set in staging GitHub Environment (staging URL)
+- [x] Production Cloud Run updated with correct callback URL
+- [x] Staging Cloud Run fixed (was missing OAUTH_CALLBACK_URL entirely)
+
+**Phase 3 — Monitoring & Operations:**
+- [x] Cloud Monitoring uptime check active (60s interval, /health endpoint)
+- [x] Alerting policy fires when health fails 2+ minutes (email notification)
+- [x] `ADMIN_USERNAME` / `ADMIN_PASSWORD` secrets created in GCP Secret Manager
+- [x] Admin secrets mounted in production and staging Cloud Run services
+- [x] CI workflows updated to mount admin secrets on every deploy
+- [x] Health check requests suppressed from access log (reduces Stackdriver noise)
+- [x] Per-route rate limiting added for auth endpoints
+
 **Deployments:**
+- [x] **Production deployed:** `https://lasso-ngqcsb2bpa-uc.a.run.app` (also `https://lasso.fm`)
 - [x] **Staging deployed:** `https://lasso-staging-ngqcsb2bpa-uc.a.run.app`
-- [x] **Production deployed:** `https://lasso-ngqcsb2bpa-uc.a.run.app`
 - [x] Health endpoint: 200 ✅
 - [x] Home page: 200 ✅
 - [x] Static assets (CSS/JS): 200 ✅
 
-**GitHub Environments configured:**
-- [x] `development`, `staging`, `production` environments created
-- [x] `roles/run.admin` granted to GitHub Actions service account
+### Sprint 10: Admin Dashboard ✅ (merged to develop)
+
+**Backend:**
+- [x] Admin session store (`src/clj/lasso/admin/session.clj`) — separate atom from user OAuth sessions
+- [x] `require-admin-auth` interceptor (`src/clj/lasso/middleware/admin.clj`)
+- [x] Admin API endpoints (`src/clj/lasso/admin/handlers.clj`):
+  - `POST /api/admin/login` — constant-time credential check, HttpOnly/SameSite=Strict cookie
+  - `POST /api/admin/logout` — destroys admin session, clears cookie
+  - `GET /api/admin/status` — system snapshot: metrics + all sessions (session keys excluded)
+  - `DELETE /api/admin/sessions/:id` — stops polling loop then deletes user session
+- [x] 18 new backend tests (handlers + middleware): 106 total backend tests, 567 assertions
+
+**Frontend:**
+- [x] Client-side routing (`src/cljs/lasso/routes.cljs`) via reitit-frontend for `/`, `/admin`, `/admin/login`
+- [x] Admin dashboard UI (Re-frame): metric cards, session table with inline stop confirmation
+- [x] Login page with Form-2 Reagent component (local state for credentials)
+- [x] Idle-session collapse toggle (active/paused shown by default)
+- [x] Admin state in app-db (`:admin` key, separate from user session state)
 
 ---
 
 ## What's In Progress
 
-**Sprint 9 - Phase 2: OAuth Configuration**
+**v0.6.0 Release Preparation**
 
-The app is live but OAuth login won't work until this is done:
+All sprint work is complete on develop. Ready to cut the release:
 
-1. Register callback URL with Last.fm (at last.fm/api/accounts):
-   - Production: `https://lasso-ngqcsb2bpa-uc.a.run.app/api/auth/callback`
-2. Set `OAUTH_CALLBACK_URL` as environment-level secrets in GitHub:
-   - Settings → Environments → `production` → Add secret
-   - Settings → Environments → `staging` → Add secret
-3. Redeploy production to pick up the env var
+1. Create release branch from develop: `git checkout -b release/0.6.0`
+2. Bump `VERSION` file from `0.5.1` → `0.6.0`
+3. Move `[Unreleased]` section in CHANGELOG.md to `[0.6.0]` with today's date
+4. Create PR to main (triggers automated release)
 
 ---
 
 ## What's Next
 
-**See:** `NEXT.md` for full Sprint 9 task list
+**See:** `NEXT.md` for immediate next task
 
-**Remaining Sprint 9 goals:**
-- Configure OAuth (above) and test end-to-end
-- Set up Cloud Monitoring uptime checks
-- Update README for public viewers
+**After v0.6.0 release:**
+- OAuth end-to-end smoke test on production (login → scrobble → verify)
 - User guide for non-technical users
 
 ---
 
 ## Key Metrics
 
-- **Test Coverage:** 181 tests, 100% passing
-  - Backend: 90 tests, 482 assertions
+- **Test Coverage:** 197 tests, 100% passing
+  - Backend: 106 tests, 567 assertions
   - Frontend: 66 tests, 197 assertions
   - E2E: 25 passing (0 skipped)
 - **Code Coverage:** 79.53% forms, 91.01% lines (cloverage)
 - **CI Duration:** ~3min 30s (validate), ~6min (validate + staging deploy)
 - **Code Quality:** All linting passes, no warnings
-- **Backend Status:** ✅ Fully functional
-- **Frontend Status:** ✅ Fully functional
-- **Deployment Status:** ✅ Live on production (OAuth config pending)
+- **Backend Status:** ✅ Fully functional (+ admin console)
+- **Frontend Status:** ✅ Fully functional (+ admin dashboard)
+- **Deployment Status:** ✅ Live on production, OAuth configured, monitoring active
 
 ---
 
@@ -213,9 +240,12 @@ main (v0.5.1)
   └─ Sprint 8 deployment preparation + E2E tests (v0.5.0)
   └─ Sprint 9 CI/CD fixes + production deploy (v0.5.1)
 
-develop (v0.5.1)
+develop (ahead of main)
   └─ All of main (synced)
-  └─ Active Sprint 9 work
+  └─ Sprint 9 Phase 2-3: OAuth config + monitoring ops
+  └─ Sprint 10: Admin dashboard (backend + frontend)
+  └─ Health check log suppression + per-route rate limiting
+  ↑ Ready for release/0.6.0 branch
 ```
 
 **Workflow:**
@@ -239,6 +269,9 @@ develop (v0.5.1)
 11. **error_code Format:** Underscore (not hyphen) for JSON key consistency
 12. **Environment Secrets:** `OAUTH_CALLBACK_URL` set per GitHub Environment (not repo-level) so staging/prod have different values
 13. **Production Image:** `deploy-prod.yml` uses `:latest` tag (CI builds it on every main push)
+14. **Admin Auth:** Separate session atom + `SameSite=Strict` cookie; completely isolated from user OAuth sessions
+15. **Admin Login Response:** Returns 200 JSON (not 302) for SPA compatibility; frontend handles navigation
+16. **Admin Credentials:** Stored in GCP Secret Manager, mounted as env vars in Cloud Run
 
 See `MEMORY.md` for more context on decisions and gotchas.
 

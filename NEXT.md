@@ -1,6 +1,6 @@
 # What to Work On Next
 
-**Last Updated:** 2026-02-18 (Post v0.5.1 - Production Deployed)
+**Last Updated:** 2026-02-18 (Sprint 9 + Sprint 10 complete on develop)
 
 This file tells you exactly what to work on next. When you finish a task, update this file and commit it.
 
@@ -8,130 +8,89 @@ This file tells you exactly what to work on next. When you finish a task, update
 
 ## Immediate Next Task
 
-### 🎯 Configure OAuth (BLOCKER)
+### 🎯 Cut v0.6.0 Release
 
-**Goal:** Make the login button work on the live production app
+**Goal:** Ship the admin dashboard + monitoring + Sprint 9 completion to production
 
 **Current Status:**
-- ✅ Production live at `https://lasso-ngqcsb2bpa-uc.a.run.app`
-- ✅ Staging live at `https://lasso-staging-ngqcsb2bpa-uc.a.run.app`
-- ✅ Health, home, and static assets all return 200
-- ❌ OAuth login will fail — `OAUTH_CALLBACK_URL` not configured yet
+- ✅ Admin dashboard (Sprint 10) merged to develop
+- ✅ Monitoring & ops (Sprint 9 Phase 3) merged to develop
+- ✅ OAuth configured and working (production + staging)
+- ✅ Admin secrets deployed (GCP Secret Manager → Cloud Run)
+- ✅ Health check logs suppressed, per-route rate limiting added
+- ✅ All 197 tests passing (106 backend, 66 frontend, 25 E2E)
+- 📦 Ready to release as v0.6.0
 
 **Steps:**
 
-1. **Register callback URL with Last.fm**
-   - Go to https://www.last.fm/api/accounts
-   - Edit your API application
-   - Set callback URL to: `https://lasso-ngqcsb2bpa-uc.a.run.app/api/auth/callback`
-
-2. **Set GitHub Environment secrets** (Settings → Environments)
-   - `production` environment → Add secret:
-     ```
-     OAUTH_CALLBACK_URL = https://lasso-ngqcsb2bpa-uc.a.run.app/api/auth/callback
-     ```
-   - `staging` environment → Add secret:
-     ```
-     OAUTH_CALLBACK_URL = https://lasso-staging-ngqcsb2bpa-uc.a.run.app/api/auth/callback
-     ```
-   - Environment secrets override repo-level secrets, so each deploy uses the right URL.
-
-3. **Update the running production service** (can do without a full redeploy):
+1. **Ensure develop is up to date:**
    ```bash
-   gcloud run services update lasso \
-     --region us-central1 \
-     --update-env-vars OAUTH_CALLBACK_URL=https://lasso-ngqcsb2bpa-uc.a.run.app/api/auth/callback
+   git checkout develop
+   git pull origin develop
    ```
 
-4. **Test OAuth end-to-end:**
-   - Visit https://lasso-ngqcsb2bpa-uc.a.run.app
-   - Click "Login with Last.fm"
-   - Complete OAuth flow
-   - Confirm you land back at the app, logged in
-   - Start a session, let it run for a minute, verify scrobbles appear in Last.fm
-
-**Acceptance Criteria:**
-- Login → Last.fm OAuth → callback → logged in, no errors
-- Start session → scrobbles appear in Last.fm profile
-
-**Priority:** CRITICAL — nothing else matters until this works
-
----
-
-## Sprint 9 Remaining Tasks
-
-### Phase 2: Validate Production (after OAuth configured)
-
-1. **End-to-end smoke test on production:**
-   - [ ] Login with Last.fm OAuth
-   - [ ] Start a session following a test account
-   - [ ] Confirm scrobbles appear after ~20 seconds
-   - [ ] Pause, resume, and stop the session
-   - [ ] Logout
-
-2. **Staging validation (optional):**
-   - [ ] Same test on staging URL (using staging OAUTH_CALLBACK_URL)
-
----
-
-### Phase 3: Monitoring & Alerting
-
-**Goal:** Know when the app is down before users report it
-
-1. **Cloud Monitoring uptime check:**
+2. **Create release branch:**
    ```bash
-   # Via GCP Console: Monitoring → Uptime checks → Create
-   # URL: https://lasso-ngqcsb2bpa-uc.a.run.app/health
-   # Check every 1 minute
+   git checkout -b release/0.6.0
    ```
 
-2. **Alerting policy:**
-   - Create alert when uptime check fails 2+ times
-   - Notification channel: email
+3. **Bump VERSION file:**
+   ```bash
+   echo "0.6.0" > VERSION
+   ```
 
-3. **Log-based metrics** (optional):
-   - Track login events, session starts, scrobble counts
+4. **Update CHANGELOG.md:**
+   - Change `## [Unreleased]` → `## [0.6.0] - 2026-02-18`
+   - Add link at bottom: `[0.6.0]: https://github.com/jackmoch/lasso/compare/v0.5.1...v0.6.0`
+   - Update `[Unreleased]` link: `[Unreleased]: https://github.com/jackmoch/lasso/compare/v0.6.0...HEAD`
+
+5. **Commit and push:**
+   ```bash
+   git add VERSION CHANGELOG.md
+   git commit -m "chore(release): bump version to 0.6.0"
+   git push -u origin release/0.6.0
+   ```
+
+6. **Create PR to main:**
+   ```bash
+   gh pr create --base main --title "Release v0.6.0" --body "Sprint 9 (Launch) + Sprint 10 (Admin Dashboard) release"
+   ```
+
+7. **After PR merges:** GitHub Actions automatically creates the tag + release
+
+8. **Sync develop:**
+   ```bash
+   git checkout develop
+   git merge origin/main
+   git push origin develop
+   ```
 
 **Acceptance Criteria:**
-- Uptime check active and alerting configured
-- Logs visible in Cloud Console
+- `v0.6.0` tag exists on main
+- GitHub release created with CHANGELOG notes
+- Production auto-deploys via `deploy-prod.yml`
 
 ---
 
-### Phase 4: Documentation & README
+## After v0.6.0 Ships
 
-**Goal:** Make the app legible to someone discovering it for the first time
+### End-to-End Smoke Test
 
-1. **Update README.md:**
-   - [ ] Add production URL as the "Try it" link
-   - [ ] Add a brief description of what Lasso does
-   - [ ] Add screenshot or demo GIF
-   - [ ] Update badges to reflect live deployment
+Verify the full user flow on production:
 
-2. **User guide** (can be a simple page in the app or a docs file):
-   - [ ] What is Lasso and why would you use it
-   - [ ] How to start a session
-   - [ ] What "following" means (mirrors scrobbles, not a social follow)
-   - [ ] Why scrobbles may be slightly delayed (~20s polling interval)
-   - [ ] How to stop following
+1. Visit `https://lasso.fm`
+2. Click "Login with Last.fm" → complete OAuth flow → confirm redirect back, logged in
+3. Enter a target username → Start session
+4. Wait ~20 seconds → confirm scrobbles appear in activity feed
+5. Pause, resume, stop the session
+6. Test admin console: visit `/admin/login` → login with admin credentials → view sessions → confirm they appear
 
-**Acceptance Criteria:**
-- README is useful for someone finding the repo
-- Users can understand how to use the app without asking questions
+### Admin Console Access
 
----
-
-## Success Criteria for v0.6.0 Release
-
-Sprint 9 complete when:
-- ✅ App deployed to production Cloud Run
-- [ ] Full OAuth flow working with real Last.fm API (needs OAUTH_CALLBACK_URL config)
-- [ ] End-to-end scrobble test passing on production
-- [ ] Monitoring and uptime alerting operational
-- [ ] README updated with live URL
-- [ ] Ready for public use
-
-**Next Release:** v0.6.0 (Sprint 9 complete, fully functional launch)
+Admin credentials are in GCP Secret Manager:
+- **Username:** `admin`
+- **Password:** stored in `admin-password` secret in GCP Secret Manager (project: `lasso-scrobbler-0667`)
+- **URL:** `https://lasso.fm/admin/login`
 
 ---
 
@@ -142,7 +101,6 @@ These features can be tackled post-launch:
 - **Manual Backfill Feature**
   - Allow users to manually select recent scrobbles to backfill
   - Show preview of target user's last 10 scrobbles before starting session
-  - **Defer to post-launch enhancement**
 
 - **Enhanced Error Messages**
   - Better messaging for invalid/non-existent usernames
@@ -152,20 +110,23 @@ These features can be tackled post-launch:
   - Migrate from in-memory atom to Redis
   - Enables multi-instance deployment and session persistence across restarts
 
-- **Custom Domain**
-  - Configure a custom domain in Cloud Run (e.g., lasso.app)
-  - Update Last.fm app callback URL accordingly
+- **Session Detail View** (Admin)
+  - Drill into a single session's full recent-scrobbles list
+  - Track Last.fm API error rates per session
 
-- **Mobile App** (Far future)
-  - Native iOS/Android apps
-  - Push notifications for new scrobbles
+- **Log-Based Metrics**
+  - Track login events, session starts, scrobble counts in Cloud Monitoring
+
+- **User Guide**
+  - Simple in-app or docs page explaining Lasso for non-technical users
+  - What "following" means, why scrobbles are delayed, how to stop
 
 ---
 
 ## Reference
 
 **Cloud Run URLs:**
-- Production: `https://lasso-ngqcsb2bpa-uc.a.run.app`
+- Production: `https://lasso-ngqcsb2bpa-uc.a.run.app` (also `https://lasso.fm`)
 - Staging: `https://lasso-staging-ngqcsb2bpa-uc.a.run.app`
 
 **GCP Project:** `lasso-scrobbler-0667`, region `us-central1`
@@ -184,7 +145,7 @@ gcloud run services update lasso \
 gcloud run services logs read lasso --region us-central1 --limit 50
 
 # Trigger production deploy manually
-gh workflow run deploy-prod.yml --ref main --field version=vX.Y.Z
+gh workflow run deploy-prod.yml --ref main --field version=v0.6.0
 ```
 
 ---
