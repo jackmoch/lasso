@@ -1,13 +1,13 @@
 # Sprint 8 Summary: Deployment Preparation
 
 **Status:** ✅ Complete
-**Duration:** 2026-02-16
-**Branch:** `feature/sprint-8-deployment`
-**PR:** #17
+**Duration:** 2026-02-16 to 2026-02-17
+**Branch:** `feature/sprint-8-deployment` → `develop`
+**PRs:** #17 (deployment infrastructure), #18 (v0.5.0 release)
 
 ## Overview
 
-Sprint 8 focused on preparing the application for deployment to Google Cloud Run and implementing automated CI/CD workflows. This sprint transformed Lasso from a locally-running application to a fully-deployed, production-ready service with automated deployments across multiple environments.
+Sprint 8 focused on two phases: (1) preparing the application for deployment to Google Cloud Run with automated CI/CD workflows, and (2) completing the E2E test suite with all 25 tests passing and fixing multiple backend/frontend issues discovered during testing.
 
 ## Objectives
 
@@ -17,6 +17,8 @@ Sprint 8 focused on preparing the application for deployment to Google Cloud Run
 4. ✅ Debug and fix deployment issues
 5. ✅ Implement automated CI/CD workflows
 6. ✅ Create comprehensive deployment documentation
+7. ✅ Complete E2E test suite (all 25 tests passing, 0 skipped)
+8. ✅ Fix backend bugs discovered during E2E testing
 
 ## Accomplishments
 
@@ -350,25 +352,105 @@ cloudbuild.yaml                           (98 lines, rewritten 61%)
 - **Automated deployment:** ~6 minutes per deploy + automatic on push
 - **Rollback time:** Minutes instead of hours
 
+## Phase 6: E2E Test Completion ✅ (2026-02-17)
+
+### E2E Test Infrastructure
+
+**Mock Last.fm Server (`test/e2e/mocks/lastfm-mock-server.js`):**
+- Express.js server running on port 3456 during tests
+- Simulates Last.fm API endpoints: auth, user.getInfo, user.getRecentTracks, track.scrobble
+- OAuth flow simulation with deterministic token/session generation
+- Returns realistic API responses matching Last.fm format
+
+**Test Results:** 25/25 E2E tests passing (was 7 passing, 15 skipped, 3 failing)
+
+### Backend Bug Fixes
+
+**1. SPA Routing (404 → index.html)**
+- **Problem:** Navigating to unknown routes (e.g., `/unknown`) returned blank page
+- **Root Cause:** Pedestal had no catch-all handler for unmatched non-API routes
+- **Solution:** Added `spa-not-found-interceptor` using `::http/not-found-interceptor` hook
+  - API routes (`/api/*`) return 404 JSON
+  - All other unmatched routes serve `index.html` for SPA routing
+- **Commit:** `510df20`
+
+**2. CORS & Security Headers Phase Fix**
+- **Problem:** CORS headers missing from error responses
+- **Root Cause:** CORS interceptor was in `:enter` phase; should be `:leave`
+- **Solution:** Moved CORS to `:leave` phase so it runs on ALL responses
+
+**3. CSP Environment-Aware Configuration**
+- **Problem:** CSP blocked shadow-cljs hot reload in development
+- **Solution:** Relaxed CSP in development (`unsafe-inline`, `unsafe-eval`), strict in production
+
+**4. Request Logging Nil Crash**
+- **Problem:** `NullPointerException` in `request-logging-interceptor` for unmatched routes
+- **Root Cause:** `(>= status 400)` crashed when status was nil
+- **Solution:** Added nil guard: `(and status (>= status 400))`
+
+**5. clj-http Error Body Parsing**
+- **Problem:** Invalid username error returned `"contains? not supported on type: java.lang.String"`
+- **Root Cause:** Without `:coerce :always`, clj-http returns 4xx body as raw String
+- **Solution:** Added `:throw-exceptions false` AND `:coerce :always` to all HTTP requests
+
+**6. Invalid Username Error Code**
+- **Problem:** Invalid Last.fm usernames returned generic `START_SESSION_FAILED` code
+- **Root Cause:** Last.fm error code 6 (integer) was being passed to regex instead of `:message` string
+- **Solution:** `validate-target-user` now uses `(:message result)` which contains "User not found"
+- **Result:** Returns `INVALID_TARGET_USERNAME` code with descriptive frontend error message
+
+**7. error_code Format (Hyphen vs Underscore)**
+- **Problem:** Backend sent `"error-code"` but frontend read `"error_code"`
+- **Root Cause:** Clojure keyword `(:error-code ...)` serializes to `"error-code"` not `"error_code"`
+- **Solution:** Changed all `error-response` calls to use `:error_code` keyword
+- **Impact:** Updated 5 test files (18 occurrences) to match new format
+
+### Test Updates
+
+**5 test files updated for error_code format:**
+- `test/clj/lasso/util/http_test.clj`
+- `test/clj/lasso/auth/handlers_test.clj`
+- `test/clj/lasso/middleware_test.clj`
+- `test/clj/lasso/session/handlers_test.clj`
+- `test/clj/lasso/integration/manual_testing_issues_test.clj`
+
+**Test expectation update:**
+- `session/handlers_test.clj`: Changed `"START_SESSION_FAILED"` → `"INVALID_TARGET_USERNAME"` to match corrected behavior
+
+### E2E Test Reliability Improvements
+
+- Increased `waitForResponse` timeout: 10s → 20s
+- Added `RATE_LIMIT_MAX_REQUESTS=500` to prevent throttling during test suite
+- Backend started with correct mock server env vars (`LASTFM_API_BASE_URL=http://localhost:3456`)
+
 ## Conclusion
 
-Sprint 8 successfully transformed Lasso into a production-ready application with automated CI/CD workflows. The deployment infrastructure is robust, well-documented, and follows industry best practices. All objectives were met, and the application is now ready for launch preparation in Sprint 9.
+Sprint 8 successfully transformed Lasso into a production-ready application with automated CI/CD workflows AND a complete E2E test suite. The deployment infrastructure is robust, well-documented, and follows industry best practices. All 181 tests pass (25 E2E + 90 backend + 66 frontend).
 
 ### Key Achievements
-✅ Fully automated deployment pipeline
-✅ Multi-environment support (dev/staging/prod)
+✅ Fully automated deployment pipeline (dev/staging/prod)
+✅ Multi-environment support
 ✅ Comprehensive smoke testing
 ✅ Secure credential management
-✅ Zero-downtime deployments
-✅ Automatic rollback capability
+✅ Zero-downtime deployments with automatic rollback
 ✅ Complete documentation
+✅ All 25 E2E tests passing (0 skipped)
+✅ SPA routing working correctly
+✅ Invalid username error display fixed
+✅ Production security middleware (CORS, CSP, rate limiting)
+
+### Final Test Metrics
+- **Backend:** 90 tests, 482 assertions, 0 failures
+- **Frontend:** 66 tests, 197 assertions, 0 failures
+- **E2E:** 25 tests, 0 failures, 0 skipped
+- **Total:** 181 tests, 100% passing
 
 ### Status
 **Sprint 8: Complete** 🎉
-**Ready for:** Sprint 9 - Launch Preparation
-**Deployment URL:** https://lasso-manual-test-ngqcsb2bpa-uc.a.run.app
+**Ready for:** Sprint 9 - Launch
+**Release:** v0.5.0 (tagged automatically on main)
 
 ---
 
-**Next Sprint:** Sprint 9 - Launch Preparation
-**Focus Areas:** Monitoring, Production Domain, Security Audit, Performance Optimization
+**Next Sprint:** Sprint 9 - Launch
+**Focus Areas:** Configure real GCP credentials, staging deployment validation, production launch, monitoring setup

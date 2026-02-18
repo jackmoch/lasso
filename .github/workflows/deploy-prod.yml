@@ -113,7 +113,7 @@ jobs:
             --cpu 1 \
             --max-instances 20 \
             --min-instances 1 \
-            --set-env-vars ENVIRONMENT=${{ env.ENVIRONMENT }},LASTFM_API_BASE_URL=https://ws.audioscrobbler.com,LASTFM_AUTH_URL=https://www.last.fm,LOG_LEVEL=info \
+            --set-env-vars ENVIRONMENT=${{ env.ENVIRONMENT }},LASTFM_API_BASE_URL=https://ws.audioscrobbler.com,LASTFM_AUTH_URL=https://www.last.fm,LOG_LEVEL=info,OAUTH_CALLBACK_URL=${{ secrets.OAUTH_CALLBACK_URL }} \
             --set-secrets LASTFM_API_KEY=lastfm-api-key:latest,LASTFM_API_SECRET=lastfm-api-secret:latest,SESSION_SECRET=session-secret:latest \
             --no-traffic  # Deploy without routing traffic initially
 

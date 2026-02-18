@@ -376,7 +376,7 @@ jobs:
             --cpu 1 \
             --max-instances 3 \
             --min-instances 0 \
-            --set-env-vars ENVIRONMENT=development,LASTFM_API_BASE_URL=https://ws.audioscrobbler.com,LASTFM_AUTH_URL=https://www.last.fm,LOG_LEVEL=debug \
+            --set-env-vars ENVIRONMENT=development,LASTFM_API_BASE_URL=https://ws.audioscrobbler.com,LASTFM_AUTH_URL=https://www.last.fm,LOG_LEVEL=debug,OAUTH_CALLBACK_URL=${{ secrets.OAUTH_CALLBACK_URL }} \
             --set-secrets LASTFM_API_KEY=lastfm-api-key:latest,LASTFM_API_SECRET=lastfm-api-secret:latest,SESSION_SECRET=session-secret:latest
 
       - name: Allow unauthenticated access (Dev)
@@ -501,7 +501,7 @@ jobs:
             --cpu 1 \
             --max-instances 5 \
             --min-instances 0 \
-            --set-env-vars ENVIRONMENT=staging,LASTFM_API_BASE_URL=https://ws.audioscrobbler.com,LASTFM_AUTH_URL=https://www.last.fm,LOG_LEVEL=info \
+            --set-env-vars ENVIRONMENT=staging,LASTFM_API_BASE_URL=https://ws.audioscrobbler.com,LASTFM_AUTH_URL=https://www.last.fm,LOG_LEVEL=info,OAUTH_CALLBACK_URL=${{ secrets.OAUTH_CALLBACK_URL }} \
             --set-secrets LASTFM_API_KEY=lastfm-api-key:latest,LASTFM_API_SECRET=lastfm-api-secret:latest,SESSION_SECRET=session-secret:latest
 
       - name: Allow unauthenticated access (Staging)
@@ -525,9 +525,19 @@ jobs:
           echo "🧪 Running comprehensive smoke tests..."
           SERVICE_URL="${{ steps.get-url.outputs.url }}"
 
-          # Health check
+          # Wait for IAM propagation and cold start
+          echo "Waiting 15s for IAM propagation and service warm-up..."
+          sleep 15
+
+          # Health check with retries
           echo "Testing health endpoint..."
-          health_status=$(curl -s -o /dev/null -w "%{http_code}" $SERVICE_URL/health)
+          health_status="000"
+          for i in 1 2 3 4 5; do
+            health_status=$(curl -s -o /dev/null -w "%{http_code}" $SERVICE_URL/health)
+            if [ "$health_status" = "200" ]; then break; fi
+            echo "  Attempt $i: got $health_status, retrying in 10s..."
+            sleep 10
+          done
           if [ "$health_status" != "200" ]; then
             echo "❌ Health check failed: $health_status"
             exit 1
@@ -602,6 +612,7 @@ jobs:
           fi
 
       - name: Post deployment comment
+        continue-on-error: true
         uses: actions/github-script@v7
         with:
           script: |

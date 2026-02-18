@@ -491,7 +491,7 @@ gcloud run deploy lasso --image gcr.io/PROJECT_ID/lasso --platform managed --reg
 
 ## Current Project Status
 
-**Current Sprint**: Sprint 8 (Deployment Preparation - Not Started)
+**Current Sprint**: Sprint 9 (Launch - Not Started)
 
 **Completed:**
 - ✅ **Sprint 2**: Development environment and project scaffolding
@@ -538,28 +538,36 @@ gcloud run deploy lasso --image gcr.io/PROJECT_ID/lasso --platform managed --reg
   - Fixed 6 critical bugs discovered during E2E testing
   - Complete full-stack application functional
 
-- ✅ **Sprint 7**: Integration Testing & Polish (v0.4.0 on develop, 2026-02-13)
+- ✅ **Sprint 7**: Integration Testing & Polish (part of v0.5.0)
   - ClojureScript testing infrastructure (shadow-cljs :node-test)
   - Frontend unit tests (66 tests: 32 events, 21 subs, 13 components)
   - Backend integration tests (90 tests, including 15 edge case tests)
-  - E2E testing with Playwright (7 passing, 15 skipped pending auth mocking)
+  - E2E testing with Playwright (7 passing initially, 15 skipped)
   - Test coverage reporting with cloverage (79.53% forms, 91.01% lines)
   - CI/CD integration with test execution and coverage upload
   - Comprehensive testing documentation (2,502 lines across 5 guides)
-  - Fixed 5 bugs (Babashka, subscriptions, components, CI)
-  - Total: 163 tests, 679 assertions, 100% passing
 
-**Version:** v0.4.0 (Sprint 7 complete, on develop branch)
+- ✅ **Sprint 8**: Deployment Preparation & E2E Completion (Released v0.5.0 on 2026-02-17)
+  - Mock Last.fm server for E2E testing without real credentials
+  - All 25 E2E tests passing (0 skipped, was 15 skipped)
+  - Production security middleware (CORS, CSP, rate limiting, request logging)
+  - SPA routing via Pedestal `::http/not-found-interceptor`
+  - Unified CI/CD pipeline for dev/staging/prod Cloud Run deployment
+  - Docker multi-stage build with proper frontend asset copying
+  - IAM binding for unauthenticated Cloud Run access
+  - Fixed 7 backend bugs (error_code format, clj-http parsing, nil status crash, etc.)
+  - Total: 181 tests (25 E2E + 90 backend + 66 frontend), 100% passing
+
+**Version:** v0.5.0 (Sprint 8 complete, released to main)
 
 **Branching Model:**
-- **`main`**: Production releases only (currently v0.3.0)
-- **`develop`**: Active development (v0.4.0 - Sprint 7 merged)
+- **`main`**: Production releases only (currently v0.5.0)
+- **`develop`**: Active development (v0.5.0 - Sprint 8 merged)
 - **Feature branches**: Created from and merged to `develop`
 - **Release branches**: Created from `develop`, merged to `main` (triggers automated release)
 
 **Next Phases:**
-- Sprint 8: Deployment preparation (E2E auth mocking, Cloud Run setup) - NEXT
-- Sprint 9: Launch
+- Sprint 9: Launch (GCP credentials setup, staging deployment, production launch) - NEXT
 
 ## Common Patterns
 
