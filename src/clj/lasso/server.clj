@@ -8,6 +8,7 @@
             [lasso.config :as config]
             [lasso.routes :as routes]
             [lasso.middleware.security :as security]
+            [lasso.session.store :as store]
             [taoensso.timbre :as log])
   (:gen-class))
 
@@ -70,6 +71,7 @@
                      http/create-server
                      http/start)]
       (reset! server-instance server)
+      (store/start-cleanup-scheduler!)
       (log/info "Server started on port" (get-in config/config [:server :port]))
       server)))
 
@@ -77,6 +79,7 @@
   "Stop the Pedestal server."
   []
   (when @server-instance
+    (store/stop-cleanup-scheduler!)
     (http/stop @server-instance)
     (reset! server-instance nil)
     (log/info "Server stopped")))

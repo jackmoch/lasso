@@ -82,6 +82,21 @@
 
 (def request-counts (atom {}))  ; {ip-address {minute-bucket request-count}}
 
+(defn extract-client-ip
+  "Extract the real client IP from request headers.
+   Cloud Run (and trusted reverse proxies) append the connecting client's IP
+   as the last entry in X-Forwarded-For. Taking the last entry prevents
+   rate limit bypass via header spoofing — an attacker can prepend fake IPs
+   but cannot forge the final entry added by the trusted proxy."
+  [request]
+  (if-let [forwarded-for (get-in request [:headers "x-forwarded-for"])]
+    (-> forwarded-for
+        (str/split #",")
+        last
+        str/trim)
+    (or (get-in request [:headers "x-real-ip"])
+        (:remote-addr request))))
+
 (defn current-minute-bucket
   "Get current minute bucket for rate limiting (e.g., 2026-02-13T16:45)."
   []
@@ -124,9 +139,7 @@
              (let [enabled (= (config/get-env "RATE_LIMIT_ENABLED" "true") "true")
                    max-requests (Integer/parseInt (config/get-env "RATE_LIMIT_MAX_REQUESTS" "100"))
                    request (:request context)
-                   ip-address (or (get-in request [:headers "x-forwarded-for"])
-                                 (get-in request [:headers "x-real-ip"])
-                                 (:remote-addr request))]
+                   ip-address (extract-client-ip request)]
 
                (if enabled
                  (do
