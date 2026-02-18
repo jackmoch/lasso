@@ -169,22 +169,26 @@
 ;; Request Logging (Security Audit Trail)
 ;; =============================================================================
 
+(def ^:private log-suppressed-uris
+  "URIs excluded from request logging. Health checks are high-frequency,
+   always-200 probes from the monitoring infrastructure — logging them
+   produces noise without any actionable signal."
+  #{"/health"})
+
 (def request-logging-interceptor
-  "Log requests for security audit trail in production."
+  "Log requests for security audit trail in production.
+   Health check probes are suppressed — see log-suppressed-uris."
   (interceptor
    {:name ::request-logging
     :enter (fn [context]
              (let [request (:request context)
-                   method (:request-method request)
-                   uri (:uri request)
-                   ip (or (get-in request [:headers "x-forwarded-for"])
-                         (:remote-addr request))
-                   user-agent (get-in request [:headers "user-agent"])]
-               (log/info "Request"
-                        :method method
-                        :uri uri
-                        :ip ip
-                        :user-agent user-agent)
+                   uri (:uri request)]
+               (when-not (contains? log-suppressed-uris uri)
+                 (log/info "Request"
+                           :method (:request-method request)
+                           :uri uri
+                           :ip (extract-client-ip request)
+                           :user-agent (get-in request [:headers "user-agent"])))
                context))
     :leave (fn [context]
              (let [status (get-in context [:response :status])]
