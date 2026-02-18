@@ -2,6 +2,9 @@
 
 Thank you for your interest in contributing to Lasso! This document outlines our development workflow, branching strategy, and contribution guidelines.
 
+> **Before writing any code, read [`docs/development/PIPELINE.md`](docs/development/PIPELINE.md).**
+> It defines the mandatory path from local development to production, including all required gates at each stage. This applies to human contributors and automated agents (Claude Code) equally.
+
 ## Development Workflow
 
 ### Branching Strategy
@@ -414,6 +417,37 @@ Follow [Keep a Changelog](https://keepachangelog.com/):
 - [ ] Verify git tag created: `git tag -l`
 
 **💡 Tip:** Use `scripts/prepare-release.sh` to help automate version bumps and documentation reminders.
+
+## Firestore Setup for Local Development
+
+Lasso uses Cloud Firestore for persistent user profiles and remember-me tokens (introduced in Sprint 11). Firestore is **optional for local development** — the app runs without it (persistence features are gracefully disabled).
+
+### Enable Firestore Locally (One-Time Setup)
+
+1. Install the Google Cloud SDK if not already installed: https://cloud.google.com/sdk/docs/install
+
+2. Authenticate with Application Default Credentials:
+   ```bash
+   gcloud auth application-default login
+   ```
+
+3. Confirm the Firestore database exists:
+   ```bash
+   gcloud firestore databases list --project=lasso-scrobbler-0667
+   ```
+   If it doesn't exist, see `docs/operations/environments.md` for the `gcloud firestore databases create` command.
+
+4. Start the app normally (`bb dev`). The log will say:
+   - `Firestore client initialised` — persistence is active
+   - `Firestore unavailable — persistence disabled` — running without persistence (OK for local dev)
+
+### Collection Isolation
+
+Locally, Lasso uses the `development` environment and prefixes all Firestore collection names with `dev-` (e.g. `dev-users`, `dev-remember_tokens`). This prevents local data from colliding with staging or production data.
+
+For more detail, see [`docs/operations/environments.md`](docs/operations/environments.md).
+
+---
 
 ## Getting Help
 

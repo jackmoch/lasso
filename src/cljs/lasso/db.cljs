@@ -23,4 +23,8 @@
            :sessions []
            :last-refreshed nil
            :stopping #{}}
+   :user {:profile nil
+          :sessions []
+          :loading? false
+          :error nil}
    :route nil})

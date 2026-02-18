@@ -6,6 +6,8 @@
             [lasso.auth.handlers :as auth-handlers]
             [lasso.session.handlers :as session-handlers]
             [lasso.admin.handlers :as admin-handlers]
+            [lasso.user.handlers :as user-handlers]
+            [lasso.firestore.client :as fs]
             [lasso.middleware :as mw]
             [lasso.middleware.security :as security]
             [lasso.middleware.admin :as admin-mw]))
@@ -42,11 +44,13 @@
        :body "Not found"})))
 
 (defn health-check
-  "Health check endpoint for container orchestration."
+  "Health check endpoint for container orchestration.
+   Returns Firestore connectivity status to support smoke tests."
   [_request]
   {:status 200
    :headers {"Content-Type" "application/json"}
-   :body (json/write-str {:status "ok"})})
+   :body (json/write-str {:status "ok"
+                          :firestore (if (fs/enabled?) "ok" "unavailable")})})
 
 (def routes
   "Application route definitions.
@@ -72,6 +76,9 @@
      ["/api/session/resume" :post [mw/require-auth session-handlers/resume-session-handler] :route-name :session-resume]
      ["/api/session/stop" :post [mw/require-auth session-handlers/stop-session-handler] :route-name :session-stop]
      ["/api/session/status" :get [mw/require-auth session-handlers/status-handler] :route-name :session-status]
+
+     ;; User profile (requires Firestore)
+     ["/api/user/profile" :get [mw/require-auth user-handlers/profile-handler] :route-name :user-profile]
 
      ;; Admin routes — use separate admin-session cookie, not user session
      ["/api/admin/login" :post admin-handlers/login-handler :route-name :admin-login]

@@ -22,6 +22,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - [ ] Ensure on `develop` branch: `git checkout develop && git pull`
 - [ ] Review this file for project architecture (below)
 
+> **MANDATORY: Read `docs/development/PIPELINE.md` before writing or merging any code.**
+> The pipeline defines the only approved path from development to production.
+> Skipping stages or gates is not permitted.
+
 ---
 
 ## Project Overview
@@ -298,6 +302,9 @@ cljs.user=> :cljs/quit  ; Return to Clojure REPL
 ```
 
 ### Gitflow Workflow (IMPORTANT)
+
+> **The full pipeline is codified in `docs/development/PIPELINE.md`. Read it before making any changes.**
+> Below is a quick reference only — the pipeline document is the authoritative source.
 
 **Starting New Work:**
 ```bash

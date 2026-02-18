@@ -2,8 +2,9 @@
   "Session lifecycle management and state transitions."
   (:require [lasso.session.store :as store]
             [lasso.lastfm.client :as lastfm]
-            [lasso.validation.schemas :as schemas]
             [lasso.polling.scheduler :as scheduler]
+            [lasso.user.store :as user-store]
+            [lasso.util.crypto :as crypto]
             [taoensso.timbre :as log]))
 
 (defn validate-target-user
@@ -34,31 +35,36 @@
 (defn start-session
   "Start a new following session for the given session-id.
    Validates the target user exists before creating the session.
+   Writes a session record to Firestore (no-op if unavailable).
    Returns {:success true :session ...} or {:success false :error ...}"
   [session-id target-username]
   (log/info "Starting following session" {:session-id session-id
                                           :target-username target-username})
 
-  ;; Validate target user exists
   (let [validation (validate-target-user target-username)]
     (if (:valid? validation)
-      (let [now (System/currentTimeMillis)
+      (let [now              (System/currentTimeMillis)
+            fs-session-id    (crypto/generate-uuid)
             following-session {:target-username (:username validation)
-                              :state :active
-                              :started-at now
-                              :scrobble-count 0
-                              :scrobble-cache #{}
-                              :recent-scrobbles []}
+                               :state           :active
+                               :started-at      now
+                               :scrobble-count  0
+                               :scrobble-cache  #{}
+                               :recent-scrobbles []
+                               :fs-session-id   fs-session-id}
             updated (store/update-session
                      session-id
                      (fn [session]
                        (if (:following-session session)
-                         ;; Session already exists - don't overwrite
                          session
                          (assoc session :following-session following-session))))]
         (if updated
-          (do
-            ;; Start polling for this session
+          (let [username (:username updated)]
+            ;; Log session start in Firestore
+            (user-store/add-session-record username fs-session-id
+                                           (:username validation) now)
+            (user-store/update-last-target username (:username validation))
+            ;; Start polling
             (scheduler/handle-session-state-change session-id :active)
             {:success true :session updated})
           {:success false :error "Session not found"}))
@@ -84,7 +90,6 @@
                        session-id
                        (fn [session]
                          (assoc-in session [:following-session :state] :paused)))]
-          ;; Stop polling when paused
           (scheduler/handle-session-state-change session-id :paused)
           {:success true :session updated})))
     {:success false :error "Session not found"}))
@@ -109,27 +114,35 @@
                        session-id
                        (fn [session]
                          (assoc-in session [:following-session :state] :active)))]
-          ;; Resume polling when resumed
           (scheduler/handle-session-state-change session-id :active)
           {:success true :session updated})))
     {:success false :error "Session not found"}))
 
 (defn stop-session
   "Stop and clear a following session.
+   Writes the final session record to Firestore (no-op if unavailable).
    Returns {:success true :session ...} or {:success false :error ...}"
   [session-id]
   (log/info "Stopping following session" {:session-id session-id})
 
-  (let [updated (store/update-session
+  ;; Capture following-session data before clearing it
+  (let [current (store/get-session session-id)
+        following (when current (:following-session current))
+        updated (store/update-session
                  session-id
                  (fn [session]
                    (if (:following-session session)
                      (assoc session :following-session nil)
-                     ;; No following session to stop
                      session)))]
     (if updated
       (do
-        ;; Stop polling when session stopped
+        ;; Finish Firestore record with final scrobble count
+        (when following
+          (user-store/finish-session-record
+           (:username current)
+           (:fs-session-id following)
+           (or (:scrobble-count following) 0)
+           "stopped"))
         (scheduler/handle-session-state-change session-id :stopped)
         {:success true :session updated})
       {:success false :error "Session not found"})))
@@ -158,11 +171,3 @@
     {:authenticated false
      :username nil
      :session nil}))
-
-(defn can-start-session?
-  "Check if a new following session can be started.
-   Returns true if no active session exists."
-  [session-id]
-  (if-let [session (store/get-session session-id)]
-    (nil? (:following-session session))
-    false))
