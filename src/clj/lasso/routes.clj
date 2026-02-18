@@ -5,8 +5,10 @@
             [clojure.data.json :as json]
             [lasso.auth.handlers :as auth-handlers]
             [lasso.session.handlers :as session-handlers]
+            [lasso.admin.handlers :as admin-handlers]
             [lasso.middleware :as mw]
-            [lasso.middleware.security :as security]))
+            [lasso.middleware.security :as security]
+            [lasso.middleware.admin :as admin-mw]))
 
 (defn home-page
   "Serve the main application page."
@@ -69,4 +71,10 @@
      ["/api/session/pause" :post [mw/require-auth session-handlers/pause-session-handler] :route-name :session-pause]
      ["/api/session/resume" :post [mw/require-auth session-handlers/resume-session-handler] :route-name :session-resume]
      ["/api/session/stop" :post [mw/require-auth session-handlers/stop-session-handler] :route-name :session-stop]
-     ["/api/session/status" :get [mw/require-auth session-handlers/status-handler] :route-name :session-status]}))
+     ["/api/session/status" :get [mw/require-auth session-handlers/status-handler] :route-name :session-status]
+
+     ;; Admin routes — use separate admin-session cookie, not user session
+     ["/api/admin/login" :post admin-handlers/login-handler :route-name :admin-login]
+     ["/api/admin/logout" :post [admin-mw/require-admin-auth admin-handlers/logout-handler] :route-name :admin-logout]
+     ["/api/admin/status" :get [admin-mw/require-admin-auth admin-handlers/status-handler] :route-name :admin-status]
+     ["/api/admin/sessions/:session-id" :delete [admin-mw/require-admin-auth admin-handlers/force-stop-handler] :route-name :admin-force-stop]}))

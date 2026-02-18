@@ -45,6 +45,9 @@
              :ttl-ms (Long/parseLong (get-env "SESSION_TTL_MS" "86400000"))              ; 24h
              :cleanup-interval-ms (Long/parseLong (get-env "SESSION_CLEANUP_INTERVAL_MS" "3600000"))} ; 1h
    :polling {:interval-ms (Integer/parseInt (get-env "POLLING_INTERVAL_MS" "20000"))}
+   :admin {:username (get-env "ADMIN_USERNAME")
+           :password (get-env "ADMIN_PASSWORD")
+           :session-ttl-ms (Long/parseLong (get-env "ADMIN_SESSION_TTL_MS" "28800000"))} ; 8h
    :environment (keyword (get-env "ENVIRONMENT" "development"))})
 
 (def config

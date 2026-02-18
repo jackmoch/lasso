@@ -15,4 +15,12 @@
    :ui {:loading? false
         :error nil
         :session-control-loading? false
-        :polling? false}})
+        :polling? false}
+   :admin {:authenticated? false
+           :loading? false
+           :error nil
+           :metrics nil
+           :sessions []
+           :last-refreshed nil
+           :stopping #{}}
+   :route nil})
