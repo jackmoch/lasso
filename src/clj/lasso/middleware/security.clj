@@ -195,6 +195,67 @@
                context))}))
 
 ;; =============================================================================
+;; Auth Endpoint Rate Limiting
+;; =============================================================================
+
+;; A separate counter from the global rate limiter so auth limits are tracked
+;; independently — a flood of auth attempts won't consume the global budget,
+;; and we can enforce a much tighter ceiling on these specific endpoints.
+(def ^:private auth-request-counts (atom {}))
+
+(defn- get-auth-request-count [ip-address]
+  (get-in @auth-request-counts [ip-address (current-minute-bucket)] 0))
+
+(defn- increment-auth-request-count! [ip-address]
+  (swap! auth-request-counts update-in [ip-address (current-minute-bucket)] (fnil inc 0)))
+
+(defn reset-auth-rate-limit-counts!
+  "Reset auth rate limit counters. For testing use only."
+  []
+  (reset! auth-request-counts {}))
+
+(def auth-rate-limit-interceptor
+  "Stricter per-route rate limit for authentication endpoints.
+   /api/auth/init and /api/auth/callback each trigger upstream Last.fm API
+   calls, so a tighter ceiling prevents abuse and protects Last.fm quota.
+
+   Controlled by AUTH_RATE_LIMIT_MAX_REQUESTS env var (default: 10/min per IP).
+   Respects the global RATE_LIMIT_ENABLED flag."
+  (interceptor
+   {:name ::auth-rate-limit
+    :enter (fn [context]
+             (let [enabled (= (config/get-env "RATE_LIMIT_ENABLED" "true") "true")
+                   max-requests (Integer/parseInt
+                                 (config/get-env "AUTH_RATE_LIMIT_MAX_REQUESTS" "10"))
+                   request (:request context)
+                   ip-address (extract-client-ip request)]
+               (if enabled
+                 (do
+                   ;; Periodically sweep old minute buckets
+                   (when (zero? (rand-int 100))
+                     (let [cutoff (- (current-minute-bucket) 2)]
+                       (swap! auth-request-counts
+                              (fn [counts]
+                                (into {}
+                                      (map (fn [[ip buckets]]
+                                             [ip (into {} (filter #(> (key %) cutoff) buckets))])
+                                           counts))))))
+                   (let [current-count (get-auth-request-count ip-address)]
+                     (if (>= current-count max-requests)
+                       (do
+                         (log/warn "Auth rate limit exceeded for IP:" ip-address
+                                   "count:" current-count)
+                         (assoc context :response
+                                {:status 429
+                                 :headers {"Content-Type" "application/json"
+                                           "Retry-After" "60"}
+                                 :body "{\"error\": \"Too many requests. Please try again later.\"}"}))
+                       (do
+                         (increment-auth-request-count! ip-address)
+                         context))))
+                 context)))}))
+
+;; =============================================================================
 ;; Sensitive Data Filtering
 ;; =============================================================================
 
