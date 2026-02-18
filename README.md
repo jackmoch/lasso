@@ -110,7 +110,7 @@ docker run -p 8080:8080 \
 
 ```bash
 bb dev           # Start full development environment
-bb test          # Run backend tests (90 tests)
+bb test          # Run backend tests (106 tests)
 bb test:watch    # Tests in watch mode
 bb lint          # Lint Clojure/ClojureScript
 bb build         # Build production artifacts
@@ -134,15 +134,19 @@ src/
 ├── clj/lasso/           # Backend (Clojure)
 │   ├── server.clj       # Server lifecycle
 │   ├── routes.clj       # HTTP routes
+│   ├── admin/           # Admin dashboard API
 │   ├── auth/            # OAuth flow
 │   ├── lastfm/          # Last.fm API client
+│   ├── middleware/      # Pedestal interceptors
 │   ├── session/         # Session store & manager
 │   └── polling/         # Scrobble polling engine
 └── cljs/lasso/          # Frontend (ClojureScript)
     ├── core.cljs        # App entry point
+    ├── routes.cljs      # Client-side routing
     ├── events.cljs      # Re-frame events
     ├── subs.cljs        # Re-frame subscriptions
     ├── views.cljs       # Main views
+    ├── admin/           # Admin dashboard UI
     └── components/      # UI components
 ```
 
@@ -157,11 +161,13 @@ src/
 | `PORT` | Server port (default: `8080`) | No |
 | `ENVIRONMENT` | `development` or `production` | No |
 | `POLLING_INTERVAL_MS` | Scrobble poll interval (default: `20000`) | No |
+| `ADMIN_USERNAME` | Admin console login username | No |
+| `ADMIN_PASSWORD` | Admin console login password | No |
 
 ## Testing
 
 ```bash
-bb test                          # All backend tests (90 tests, 482 assertions)
+bb test                          # All backend tests (106 tests, 567 assertions)
 npx playwright test              # E2E tests (25 tests, requires backend running)
 npx shadow-cljs compile test && node target/test.js  # Frontend tests (66 tests)
 ```

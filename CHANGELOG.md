@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - Admin Dashboard (Sprint 10)
+- **Admin console** at `/admin` with protected login at `/admin/login`
+- **Admin session store** (`src/clj/lasso/admin/session.clj`) — separate atom from user OAuth sessions
+- **Admin API endpoints** under `/api/admin/`:
+  - `POST /api/admin/login` — constant-time credential check, sets `HttpOnly`/`SameSite=Strict` cookie
+  - `POST /api/admin/logout` — destroys admin session, clears cookie
+  - `GET /api/admin/status` — system snapshot: metrics + all sessions (session keys excluded)
+  - `DELETE /api/admin/sessions/:id` — force-stops polling loop then deletes user session
+- **`require-admin-auth` interceptor** (`src/clj/lasso/middleware/admin.clj`) for all admin routes
+- **Admin dashboard UI** (Re-frame): metric cards, session table with inline stop confirmation, idle-session collapse
+- **Client-side routing** (`src/cljs/lasso/routes.cljs`) via reitit-frontend for `/`, `/admin`, `/admin/login`
+- **`ADMIN_USERNAME` / `ADMIN_PASSWORD` / `ADMIN_SESSION_TTL_MS`** config vars (8h session TTL default)
+- 18 new backend tests (admin handlers + admin auth middleware)
+
+### Added - Monitoring & Operations (Sprint 9)
+- **Cloud Monitoring uptime check** for production health endpoint (60s interval, 3 regions)
+- **Alerting policy** fires when health check fails 2+ minutes, notifies via email
+- **Admin credentials** stored in GCP Secret Manager and mounted in Cloud Run (prod + staging)
+- **Deploy workflows updated** to mount `admin-username` and `admin-password` secrets
+
+### Fixed
+- Suppress health check request logs (`/health` excluded from access log to reduce Stackdriver noise)
+- Staging `OAUTH_CALLBACK_URL` was empty — now set to correct staging callback URL
+
 ## [0.5.1] - 2026-02-18
 
 ### Fixed
