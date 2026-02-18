@@ -4,7 +4,8 @@
             [lasso.components.auth :as auth]
             [lasso.components.session-controls :as session-controls]
             [lasso.components.activity-feed :as activity-feed]
-            [lasso.components.error :as error]))
+            [lasso.components.error :as error]
+            [lasso.components.how-it-works :as how-it-works]))
 
 (defn navbar
   "Application navbar with title and tagline."
@@ -38,5 +39,7 @@
          [:div.max-w-4xl.mx-auto.px-4.pb-8
           [error/error-display]
           [auth/auth-component]
+          (when-not @(rf/subscribe [:auth/authenticated?])
+            [how-it-works/how-it-works])
           [session-controls/session-controls]
           [activity-feed/activity-feed]]]))))
