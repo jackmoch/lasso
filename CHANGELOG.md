@@ -13,6 +13,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Pass `OAUTH_CALLBACK_URL` environment variable to Cloud Run in all deploy stages (dev, staging, production)
 - Staging smoke tests: add 15s IAM propagation wait and 5-attempt health check retry loop
 - Ignore post-deployment comment failures on push events (no PR context available)
+- `publish-image` CI job now runs on `main` branch pushes, tagging image as `:latest`
+- `deploy-prod.yml`: detect new vs existing service; skip `--no-traffic` on first deploy
+- `deploy-prod.yml`: use `:latest` image tag instead of commit SHA (removes coupling between release tag and image build SHA)
 
 ## [0.5.0] - 2026-02-17
 

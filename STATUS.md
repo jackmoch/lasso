@@ -1,19 +1,19 @@
 # Project Status
 
-**Last Updated:** 2026-02-17
-**Current Sprint:** Sprint 9 (Launch Preparation - Not Started)
-**Project Phase:** Alpha Development (Pre-Launch)
+**Last Updated:** 2026-02-18
+**Current Sprint:** Sprint 9 (Launch - In Progress)
+**Project Phase:** Live (Production Deployed)
 
 ---
 
 ## Quick Status
 
-- **Version:** v0.5.0 (Sprint 8 completed 2026-02-17)
-- **Main Branch:** Production-ready v0.5.0
-- **Develop Branch:** v0.5.0 (Sprint 8 merged)
-- **Active Work:** Ready to begin Sprint 9
-- **Blockers:** None
-- **Next Milestone:** Sprint 9: Launch
+- **Version:** v0.5.1 (2026-02-18)
+- **Main Branch:** v0.5.1 (production deployed)
+- **Develop Branch:** v0.5.1 + CI/CD fixes (synced with main)
+- **Active Work:** Sprint 9 - OAuth configuration + monitoring
+- **Blockers:** `OAUTH_CALLBACK_URL` not yet configured → OAuth login won't work until set
+- **Next Milestone:** OAuth working end-to-end on production
 
 ---
 
@@ -127,44 +127,53 @@
 - [x] CORS in `:leave` phase for all responses
 - [x] CSP environment-aware (relaxed in dev, strict in prod)
 
-**Files Implemented:**
-```
-src/clj/lasso/middleware/
-└── security.clj                  ✅ CORS, CSP, rate limiting, logging
+### Sprint 9: Launch - Phase 1 ✅ (v0.5.1, 2026-02-18)
 
-test/e2e/
-├── mocks/
-│   └── lastfm-mock-server.js     ✅ Mock Last.fm API server
-├── auth.spec.js                  ✅ Auth flow E2E tests (updated)
-├── session.spec.js               ✅ Session management E2E tests (updated)
-├── error-handling.spec.js        ✅ Error handling E2E tests (updated)
-└── helpers.js                    ✅ E2E test utilities (updated)
+**CI/CD Pipeline Fixes:**
+- [x] Pass `OAUTH_CALLBACK_URL` env var to Cloud Run in all deploy stages
+- [x] Staging IAM propagation: 15s wait + 5-attempt health check retry
+- [x] Post-deployment comment: `continue-on-error` (no PR context on push)
+- [x] `publish-image` now runs on `main` branch pushes (tagged `:latest`)
+- [x] `deploy-prod.yml`: handle first-time service creation (`--no-traffic` not valid on new services)
+- [x] `deploy-prod.yml`: use `:latest` image tag (removes SHA coupling between commits)
 
-docs/deployment/                  ✅ Deployment documentation
-docs/sprints/sprint-8-summary.md  ✅ Sprint 8 summary
-```
+**Deployments:**
+- [x] **Staging deployed:** `https://lasso-staging-ngqcsb2bpa-uc.a.run.app`
+- [x] **Production deployed:** `https://lasso-ngqcsb2bpa-uc.a.run.app`
+- [x] Health endpoint: 200 ✅
+- [x] Home page: 200 ✅
+- [x] Static assets (CSS/JS): 200 ✅
+
+**GitHub Environments configured:**
+- [x] `development`, `staging`, `production` environments created
+- [x] `roles/run.admin` granted to GitHub Actions service account
 
 ---
 
 ## What's In Progress
 
-**Nothing currently in progress** - Ready to begin Sprint 9
+**Sprint 9 - Phase 2: OAuth Configuration**
+
+The app is live but OAuth login won't work until this is done:
+
+1. Register callback URL with Last.fm (at last.fm/api/accounts):
+   - Production: `https://lasso-ngqcsb2bpa-uc.a.run.app/api/auth/callback`
+2. Set `OAUTH_CALLBACK_URL` as environment-level secrets in GitHub:
+   - Settings → Environments → `production` → Add secret
+   - Settings → Environments → `staging` → Add secret
+3. Redeploy production to pick up the env var
 
 ---
 
 ## What's Next
 
-**Immediate Next Sprint:** Sprint 9 - Launch
+**See:** `NEXT.md` for full Sprint 9 task list
 
-**Goals:**
-- Configure real GCP project with proper credentials
-- Deploy to staging environment and smoke test
-- Deploy to production
-- Set up monitoring and alerting
-- Final documentation polish
+**Remaining Sprint 9 goals:**
+- Configure OAuth (above) and test end-to-end
+- Set up Cloud Monitoring uptime checks
+- Update README for public viewers
 - User guide for non-technical users
-
-**See:** `NEXT.md` for detailed next steps
 
 ---
 
@@ -175,29 +184,38 @@ docs/sprints/sprint-8-summary.md  ✅ Sprint 8 summary
   - Frontend: 66 tests, 197 assertions
   - E2E: 25 passing (0 skipped)
 - **Code Coverage:** 79.53% forms, 91.01% lines (cloverage)
-- **CI Duration:** ~3min 30s average (validate stage)
+- **CI Duration:** ~3min 30s (validate), ~6min (validate + staging deploy)
 - **Code Quality:** All linting passes, no warnings
-- **Docker Build:** Working, multi-stage build
-- **Backend Status:** ✅ Fully functional end-to-end
-- **Frontend Status:** ✅ Fully functional end-to-end
-- **Application Status:** ✅ Complete full-stack application working
-- **Deployment Status:** ✅ Infrastructure ready, GCP credentials needed
+- **Backend Status:** ✅ Fully functional
+- **Frontend Status:** ✅ Fully functional
+- **Deployment Status:** ✅ Live on production (OAuth config pending)
+
+---
+
+## Cloud Run Services
+
+| Environment | Service | URL | Status |
+|---|---|---|---|
+| Production | `lasso` | https://lasso-ngqcsb2bpa-uc.a.run.app | ✅ Live |
+| Staging | `lasso-staging` | https://lasso-staging-ngqcsb2bpa-uc.a.run.app | ✅ Live |
+| Dev | `lasso-dev` | (not yet deployed) | ⏳ Pending |
 
 ---
 
 ## Branch Status
 
 ```
-main (v0.5.0)
+main (v0.5.1)
   └─ Sprint 2 scaffolding
   └─ Sprint 3-4 complete backend (v0.2.0)
   └─ Sprint 5-6 complete frontend (v0.3.0)
   └─ Sprint 7 testing infrastructure
-  └─ Sprint 8 deployment preparation + E2E tests
+  └─ Sprint 8 deployment preparation + E2E tests (v0.5.0)
+  └─ Sprint 9 CI/CD fixes + production deploy (v0.5.1)
 
-develop (v0.5.0)
-  └─ All of main (v0.5.0)
-  └─ Ready for Sprint 9 work
+develop (v0.5.1)
+  └─ All of main (synced)
+  └─ Active Sprint 9 work
 ```
 
 **Workflow:**
@@ -219,6 +237,8 @@ develop (v0.5.0)
 9. **HTTP Methods:** GET for unsigned (reads), POST for signed (writes)
 10. **SPA Routing:** Pedestal `::http/not-found-interceptor` for serving index.html
 11. **error_code Format:** Underscore (not hyphen) for JSON key consistency
+12. **Environment Secrets:** `OAUTH_CALLBACK_URL` set per GitHub Environment (not repo-level) so staging/prod have different values
+13. **Production Image:** `deploy-prod.yml` uses `:latest` tag (CI builds it on every main push)
 
 See `MEMORY.md` for more context on decisions and gotchas.
 
@@ -230,7 +250,8 @@ See `MEMORY.md` for more context on decisions and gotchas.
 - **Backend:** Clojure with Pedestal + Jetty
 - **Frontend:** ClojureScript with Reagent + Re-frame
 - **Build:** tools.deps, shadow-cljs, Tailwind CSS
-- **Deployment:** Docker on Google Cloud Run (infrastructure ready, needs credentials)
+- **Deployment:** Docker on Google Cloud Run (production live!)
+- **GCP Project:** `lasso-scrobbler-0667`, region `us-central1`
 
 ---
 
@@ -254,6 +275,10 @@ npx playwright test          # Run E2E tests (requires backend running)
 git checkout develop         # Work from develop
 git checkout -b feature/X    # Create feature branch
 bb pr                        # Create PR to develop
+
+# Production
+gcloud run services describe lasso --region us-central1  # Check prod service
+gcloud run services logs read lasso --region us-central1  # View logs
 ```
 
 ---
