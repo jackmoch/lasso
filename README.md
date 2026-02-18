@@ -3,11 +3,11 @@
 [![CI](https://github.com/jackmoch/lasso/workflows/CI/badge.svg)](https://github.com/jackmoch/lasso/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/jackmoch/lasso/branch/main/graph/badge.svg)](https://codecov.io/gh/jackmoch/lasso)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Live](https://img.shields.io/badge/live-production-brightgreen)](https://lasso-ngqcsb2bpa-uc.a.run.app)
+[![Live](https://img.shields.io/badge/live-lasso.fm-brightgreen)](https://lasso.fm)
 
 > Scrobble your Spotify Jam listening to Last.fm — automatically.
 
-**[Try it now →](https://lasso-ngqcsb2bpa-uc.a.run.app)**
+**[Try it now → lasso.fm](https://lasso.fm)**
 
 When you join a Spotify Jam as a guest, your listens don't get scrobbled to Last.fm. Lasso fixes that: enter the host's Last.fm username, and Lasso mirrors their scrobbles to your account in real time.
 
