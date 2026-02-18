@@ -6,6 +6,9 @@
             [lasso.db]
             [lasso.events]
             [lasso.subs]
+            [lasso.admin.subs]
+            [lasso.admin.events]
+            [lasso.routes :as routes]
             [lasso.views :as views]))
 
 ;; -- Application Initialization --
@@ -23,6 +26,7 @@
   []
   (js/console.log "🚀 Lasso initializing...")
   (rf/dispatch-sync [:initialize-db])
+  (routes/init-routes!)
   (rf/dispatch [:check-auth])
   (mount-root)
   (js/console.log "✅ Lasso ready"))
