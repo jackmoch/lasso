@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-02-18
+
+### Fixed
+- Pass `OAUTH_CALLBACK_URL` environment variable to Cloud Run in all deploy stages (dev, staging, production)
+- Staging smoke tests: add 15s IAM propagation wait and 5-attempt health check retry loop
+- Ignore post-deployment comment failures on push events (no PR context available)
+
 ## [0.5.0] - 2026-02-17
 
 ### Added - E2E Testing Infrastructure (Sprint 8)
