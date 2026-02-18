@@ -1,15 +1,16 @@
 # Sprint 9 Summary: Launch
 
-**Status:** 🔄 In Progress
+**Status:** ✅ Complete
 **Started:** 2026-02-18
-**Branch:** hotfixes directly to `main` (CI/CD fixes) + `develop` (docs)
-**Release:** v0.5.1
+**Completed:** 2026-02-18
+**Branch:** hotfixes directly to `main` (CI/CD fixes) + `develop` (docs, monitoring, admin secrets)
+**Release:** v0.5.1 (Phase 1) → v0.6.0 (Phase 2-3)
 
 ---
 
 ## Overview
 
-Sprint 9 focuses on deploying Lasso to production and making it available to real users. Phase 1 (CI/CD fixes + deployment) is complete. Phase 2 (OAuth configuration) is the current blocker.
+Sprint 9 covered deploying Lasso to production and making it available to real users. All three phases are complete. The app is live at `https://lasso.fm` with OAuth login working, monitoring active, and the admin console operational.
 
 ---
 
@@ -18,10 +19,10 @@ Sprint 9 focuses on deploying Lasso to production and making it available to rea
 1. ✅ Fix CI/CD pipeline issues discovered during first real deployment
 2. ✅ Deploy to staging successfully
 3. ✅ Deploy to production successfully
-4. ⏳ Configure OAuth callback URL so login works
-5. ⏳ Validate end-to-end flow with real Last.fm credentials
-6. ⏳ Set up monitoring and uptime alerting
-7. ⏳ Update README and user documentation
+4. ✅ Configure OAuth callback URL so login works
+5. ✅ Validate end-to-end flow with real Last.fm credentials
+6. ✅ Set up monitoring and uptime alerting
+7. ✅ Update README and user documentation
 
 ---
 
@@ -199,7 +200,7 @@ Tying a production deploy to `github.sha` creates fragility when the workflow ru
 
 ---
 
-## Current State (End of Phase 1)
+## Final State
 
 | Item | Status |
 |---|---|
@@ -207,18 +208,24 @@ Tying a production deploy to `github.sha` creates fragility when the workflow ru
 | Staging deployed | ✅ |
 | Health checks passing | ✅ |
 | Static assets serving | ✅ |
-| OAUTH_CALLBACK_URL configured | ❌ (next task) |
-| OAuth login working | ❌ (blocked on above) |
-| Monitoring set up | ❌ |
-| README updated | ❌ |
+| OAUTH_CALLBACK_URL configured | ✅ (`https://lasso.fm/api/auth/callback`) |
+| OAuth login working | ✅ (smoke tested) |
+| End-to-end scrobble flow verified | ✅ |
+| Monitoring set up | ✅ (Cloud Monitoring uptime check + alerting) |
+| Admin secrets deployed | ✅ (GCP Secret Manager → Cloud Run) |
+| README updated | ✅ |
+| Admin console operational | ✅ (Sprint 10, shipped in v0.6.0) |
 
----
+## Phase 2-3 Accomplishments (shipped in v0.6.0)
 
-## Next Steps (Phase 2)
-
-1. Register production callback URL with Last.fm API app
-2. Set `OAUTH_CALLBACK_URL` as environment-level secrets in GitHub
-3. Update running Cloud Run service env var
-4. Test full OAuth → session → scrobble flow on production
-5. Set up Cloud Monitoring uptime checks
-6. Update README.md with live URL and description
+- `OAUTH_CALLBACK_URL` registered with Last.fm and set in GitHub environment secrets (prod + staging)
+- Staging Cloud Run fixed (OAUTH_CALLBACK_URL was missing entirely)
+- `ADMIN_USERNAME` / `ADMIN_PASSWORD` stored in GCP Secret Manager, mounted in Cloud Run
+- Cloud Monitoring uptime check active (60s interval, `/health` endpoint)
+- Alerting policy fires when health fails 2+ minutes (email notification)
+- CI workflows updated to mount admin secrets on every deploy
+- Health check logs suppressed from Stackdriver
+- Per-route rate limiting added for `/api/auth/*` endpoints
+- Admin dashboard (Sprint 10): protected `/admin` console with session management
+- v0.6.0 released and deployed to production
+- Full OAuth → session → scrobble flow verified on production

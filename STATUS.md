@@ -215,7 +215,7 @@ All sprint work is complete on develop. Ready to cut the release:
 - **Code Quality:** All linting passes, no warnings
 - **Backend Status:** ✅ Fully functional (+ admin console)
 - **Frontend Status:** ✅ Fully functional (+ admin dashboard)
-- **Deployment Status:** ✅ Live on production, OAuth configured, monitoring active
+- **Deployment Status:** ✅ Live on production, OAuth verified (smoke tested), monitoring active
 
 ---
 
