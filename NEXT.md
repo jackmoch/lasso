@@ -1,18 +1,22 @@
 # What to Work On Next
 
-**Last Updated:** 2026-02-18 (v0.6.0 live, smoke test complete)
+**Last Updated:** 2026-02-19 (v0.7.0 released)
 
 ---
 
 ## Current State
 
-The app is fully live and verified:
+The app is fully live with persistent profiles:
 
-- ✅ Production: `https://lasso.fm` (v0.6.0)
-- ✅ OAuth login → session → scrobble flow verified
-- ✅ Admin console: `https://lasso.fm/admin`
-- ✅ Cloud Monitoring uptime check active
-- ✅ 197 tests, 100% passing
+- ✅ Production: `https://lasso.fm` (v0.6.0 — v0.7.0 deploy pending manual trigger)
+- ✅ Staging: v0.7.0 deployed (deployed from release branch push)
+- ✅ Profile page, remember-me login, session history all verified locally
+- ✅ 128 backend + 66 frontend tests, 100% passing
+
+**To deploy v0.7.0 to production:**
+```bash
+gh workflow run deploy-prod.yml --ref main --field version=v0.7.0
+```
 
 ---
 
@@ -73,11 +77,11 @@ Higher effort, new capabilities:
 
 **Useful commands:**
 ```bash
+# Deploy v0.7.0 to production
+gh workflow run deploy-prod.yml --ref main --field version=v0.7.0
+
 # Check prod health
 curl https://lasso.fm/health
-
-# Trigger production deploy manually (after main CI publishes :latest)
-gh workflow run deploy-prod.yml --ref main --field version=vX.Y.Z
 
 # View recent logs
 gcloud run services logs read lasso --region us-central1 --limit 50
