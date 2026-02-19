@@ -48,7 +48,14 @@
    :admin {:username (get-env "ADMIN_USERNAME")
            :password (get-env "ADMIN_PASSWORD")
            :session-ttl-ms (Long/parseLong (get-env "ADMIN_SESSION_TTL_MS" "28800000"))} ; 8h
-   :environment (keyword (get-env "ENVIRONMENT" "development"))})
+   :environment (keyword (get-env "ENVIRONMENT" "development"))
+   :firestore {:project-id (get-env "GOOGLE_CLOUD_PROJECT" "lasso-scrobbler-0667")
+               ;; Collection prefix isolates data across environments sharing one GCP project.
+               ;; dev → "dev-", staging → "staging-", production → "" (no prefix)
+               :collection-prefix (case (get-env "ENVIRONMENT" "development")
+                                    "production" ""
+                                    "staging"    "staging-"
+                                    "dev-")}})
 
 (def config
   "Application configuration loaded from environment."

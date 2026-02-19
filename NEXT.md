@@ -1,125 +1,65 @@
 # What to Work On Next
 
-**Last Updated:** 2026-02-18 (Sprint 9 + Sprint 10 complete on develop)
-
-This file tells you exactly what to work on next. When you finish a task, update this file and commit it.
+**Last Updated:** 2026-02-18 (v0.6.0 live, smoke test complete)
 
 ---
 
-## Immediate Next Task
+## Current State
 
-### 🎯 Cut v0.6.0 Release
+The app is fully live and verified:
 
-**Goal:** Ship the admin dashboard + monitoring + Sprint 9 completion to production
-
-**Current Status:**
-- ✅ Admin dashboard (Sprint 10) merged to develop
-- ✅ Monitoring & ops (Sprint 9 Phase 3) merged to develop
-- ✅ OAuth configured and working (production + staging)
-- ✅ Admin secrets deployed (GCP Secret Manager → Cloud Run)
-- ✅ Health check logs suppressed, per-route rate limiting added
-- ✅ All 197 tests passing (106 backend, 66 frontend, 25 E2E)
-- 📦 Ready to release as v0.6.0
-
-**Steps:**
-
-1. **Ensure develop is up to date:**
-   ```bash
-   git checkout develop
-   git pull origin develop
-   ```
-
-2. **Create release branch:**
-   ```bash
-   git checkout -b release/0.6.0
-   ```
-
-3. **Bump VERSION file:**
-   ```bash
-   echo "0.6.0" > VERSION
-   ```
-
-4. **Update CHANGELOG.md:**
-   - Change `## [Unreleased]` → `## [0.6.0] - 2026-02-18`
-   - Add link at bottom: `[0.6.0]: https://github.com/jackmoch/lasso/compare/v0.5.1...v0.6.0`
-   - Update `[Unreleased]` link: `[Unreleased]: https://github.com/jackmoch/lasso/compare/v0.6.0...HEAD`
-
-5. **Commit and push:**
-   ```bash
-   git add VERSION CHANGELOG.md
-   git commit -m "chore(release): bump version to 0.6.0"
-   git push -u origin release/0.6.0
-   ```
-
-6. **Create PR to main:**
-   ```bash
-   gh pr create --base main --title "Release v0.6.0" --body "Sprint 9 (Launch) + Sprint 10 (Admin Dashboard) release"
-   ```
-
-7. **After PR merges:** GitHub Actions automatically creates the tag + release
-
-8. **Sync develop:**
-   ```bash
-   git checkout develop
-   git merge origin/main
-   git push origin develop
-   ```
-
-**Acceptance Criteria:**
-- `v0.6.0` tag exists on main
-- GitHub release created with CHANGELOG notes
-- Production auto-deploys via `deploy-prod.yml`
+- ✅ Production: `https://lasso.fm` (v0.6.0)
+- ✅ OAuth login → session → scrobble flow verified
+- ✅ Admin console: `https://lasso.fm/admin`
+- ✅ Cloud Monitoring uptime check active
+- ✅ 197 tests, 100% passing
 
 ---
 
-## After v0.6.0 Ships
+## Potential Next Sprints
 
-### End-to-End Smoke Test
+There is no required work. Everything below is optional enhancements chosen by priority.
 
-Verify the full user flow on production:
+### Option A: User Experience Polish
 
-1. Visit `https://lasso.fm`
-2. Click "Login with Last.fm" → complete OAuth flow → confirm redirect back, logged in
-3. Enter a target username → Start session
-4. Wait ~20 seconds → confirm scrobbles appear in activity feed
-5. Pause, resume, stop the session
-6. Test admin console: visit `/admin/login` → login with admin credentials → view sessions → confirm they appear
+Low effort, high user-facing impact:
 
-### Admin Console Access
+1. **User guide** — add a `/how-it-works` or simple in-app explainer:
+   - What "following" means (mirrors scrobbles, not a social follow)
+   - Why scrobbles are ~20s delayed
+   - Why only tracks scrobbled after session starts are mirrored
+   - How to stop
 
-Admin credentials are in GCP Secret Manager:
-- **Username:** `admin`
-- **Password:** stored in `admin-password` secret in GCP Secret Manager (project: `lasso-scrobbler-0667`)
-- **URL:** `https://lasso.fm/admin/login`
+2. **Better error messages** — when session start fails (invalid username, private profile, API rate limit), show actionable messages instead of generic errors
 
----
+3. **Target user validation UX** — show a preview of the target user's profile before starting (avatar, display name, recent track) so users know they entered the right username
 
-## Deferred Tasks
+### Option B: Reliability & Operations
 
-These features can be tackled post-launch:
+Medium effort, reduces operational risk:
 
-- **Manual Backfill Feature**
-  - Allow users to manually select recent scrobbles to backfill
-  - Show preview of target user's last 10 scrobbles before starting session
+1. **Redis session store** — replace in-memory atom with Redis
+   - Sessions survive container restarts
+   - Enables scaling to multiple Cloud Run instances
+   - Cloud Run scales to zero at night → current sessions are lost on cold start
 
-- **Enhanced Error Messages**
-  - Better messaging for invalid/non-existent usernames
-  - API-specific error explanations with recovery suggestions
+2. **Log-based metrics** — Cloud Monitoring dashboards for:
+   - Login events per hour
+   - Active sessions over time
+   - Scrobbles submitted per hour
+   - Last.fm API error rate
 
-- **Redis Session Store**
-  - Migrate from in-memory atom to Redis
-  - Enables multi-instance deployment and session persistence across restarts
+3. **Session persistence on restart** — even without Redis, writing sessions to a file or Cloud Storage on shutdown would survive most restarts
 
-- **Session Detail View** (Admin)
-  - Drill into a single session's full recent-scrobbles list
-  - Track Last.fm API error rates per session
+### Option C: Features
 
-- **Log-Based Metrics**
-  - Track login events, session starts, scrobble counts in Cloud Monitoring
+Higher effort, new capabilities:
 
-- **User Guide**
-  - Simple in-app or docs page explaining Lasso for non-technical users
-  - What "following" means, why scrobbles are delayed, how to stop
+1. **Manual backfill** — after starting a session, show the target user's last N scrobbles (not yet mirrored) and let the user select which to backfill
+
+2. **Session detail view (Admin)** — drill into a single user's session: full recent-scrobble list, Last.fm API error log, polling health
+
+3. **Multiple concurrent targets** — follow more than one user at a time (for when the Jam host changes mid-session)
 
 ---
 
@@ -134,26 +74,14 @@ These features can be tackled post-launch:
 **Useful commands:**
 ```bash
 # Check prod health
-curl https://lasso-ngqcsb2bpa-uc.a.run.app/health
+curl https://lasso.fm/health
 
-# Update env var without full redeploy
-gcloud run services update lasso \
-  --region us-central1 \
-  --update-env-vars KEY=VALUE
+# Trigger production deploy manually (after main CI publishes :latest)
+gh workflow run deploy-prod.yml --ref main --field version=vX.Y.Z
 
 # View recent logs
 gcloud run services logs read lasso --region us-central1 --limit 50
 
-# Trigger production deploy manually
-gh workflow run deploy-prod.yml --ref main --field version=v0.6.0
+# View admin console
+open https://lasso.fm/admin
 ```
-
----
-
-## Questions or Blockers?
-
-If you encounter issues:
-1. Check `MEMORY.md` for known gotchas
-2. Check `docs/deployment/` for deployment guides
-3. Review CI workflow logs: `gh run list --branch main`
-4. Check GCP Console → Cloud Run → lasso → Logs

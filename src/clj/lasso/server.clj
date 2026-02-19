@@ -9,6 +9,7 @@
             [lasso.routes :as routes]
             [lasso.middleware.security :as security]
             [lasso.session.store :as store]
+            [lasso.firestore.client :as firestore]
             [taoensso.timbre :as log])
   (:gen-class))
 
@@ -67,6 +68,7 @@
   "Start the Pedestal server."
   []
   (when-not @server-instance
+    (firestore/init!)
     (let [server (-> (create-server)
                      http/create-server
                      http/start)]

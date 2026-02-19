@@ -121,13 +121,13 @@ gcloud secrets versions access latest --secret=lastfm-api-key
 - Check service account has `run.admin` and `iam.serviceAccountUser` roles
 - Verify project ID is correct in GitHub secret
 
-## TODO for Sprint 8
+## Sprint 8-9 Deployment Checklist (Complete)
 
-- [ ] Set up Google Cloud Project
-- [ ] Register Last.fm API application
-- [ ] Create service account and configure IAM
-- [ ] Store secrets in Secret Manager
-- [ ] Add GitHub repository secrets
-- [ ] Test deployment workflow
-- [ ] Document staging vs production environment configuration
-- [ ] Set up custom domain (optional)
+- [x] Set up Google Cloud Project (`lasso-scrobbler-0667`)
+- [x] Register Last.fm API application (callback: `https://lasso.fm/api/auth/callback`)
+- [x] Create service account and configure IAM (`roles/run.admin`)
+- [x] Store secrets in Secret Manager (`lastfm-api-key`, `lastfm-api-secret`, `session-secret`, `admin-username`, `admin-password`)
+- [x] Add GitHub repository/environment secrets (`GCP_SA_KEY`, `OAUTH_CALLBACK_URL` per environment)
+- [x] Test deployment workflow (staging + production both live)
+- [x] Document staging vs production environment configuration
+- [x] Custom domain configured (`lasso.fm` → production Cloud Run)

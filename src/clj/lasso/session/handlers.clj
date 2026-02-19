@@ -14,10 +14,7 @@
    Returns: {:state 'active', :target_username '...', :scrobble_count 0}"
   [request]
   (try
-    (let [_ (log/info "DEBUG start-session-handler request keys:" (keys request))
-          _ (log/info "DEBUG request :session:" (:session request))
-          session-id (mw/get-session-id request)
-          _ (log/info "DEBUG session-id:" session-id)
+    (let [session-id (mw/get-session-id request)
           body (:body request)
           request-data (cond
                          ;; Already parsed by body-params interceptor

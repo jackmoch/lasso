@@ -22,7 +22,10 @@
         com.taoensso/timbre {:mvn/version "6.5.0"}
 
         ;; Configuration
-        aero/aero {:mvn/version "1.1.6"}}
+        aero/aero {:mvn/version "1.1.6"}
+
+        ;; Persistence
+        com.google.cloud/google-cloud-firestore {:mvn/version "3.17.0"}}
 
  :aliases
  {:dev

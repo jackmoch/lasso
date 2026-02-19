@@ -6,17 +6,24 @@
             [lasso.components.activity-feed :as activity-feed]
             [lasso.components.error :as error]
             [lasso.components.how-it-works :as how-it-works]
-            [lasso.admin.views :as admin-views]))
+            [lasso.admin.views :as admin-views]
+            [lasso.user.views :as user-views]))
 
 (defn navbar
-  "Application navbar with title and tagline."
+  "Application navbar with title and tagline.
+   Shows a Profile link when the user is authenticated."
   []
-  [:div.bg-white.border-b.border-gray-200.mb-8
-   [:div.max-w-4xl.mx-auto.px-4.py-6
-    [:h1.text-3xl.font-bold.text-gray-900.mb-1
-     "Lasso"]
-    [:p.text-sm.text-gray-600
-     "Track your Spotify Jam listening on Last.fm"]]])
+  (fn []
+    (let [authenticated? @(rf/subscribe [:auth/authenticated?])]
+      [:div.bg-white.border-b.border-gray-200.mb-8
+       [:div.max-w-4xl.mx-auto.px-4.py-6.flex.items-center.justify-between
+        [:div
+         [:h1.text-3xl.font-bold.text-gray-900.mb-1 "Lasso"]
+         [:p.text-sm.text-gray-600
+          "Track your Spotify Jam listening on Last.fm"]]
+        (when authenticated?
+          [:a.text-sm.text-gray-600.hover:text-gray-900.font-medium
+           {:href "/profile"} "Profile"])]])))
 
 (defn loading-spinner
   "Loading spinner component."
@@ -54,4 +61,5 @@
       (case route-name
         :admin/login [admin-views/login-page]
         :admin       [admin-views/dashboard]
+        :profile     [user-views/profile-page]
         [home-panel]))))

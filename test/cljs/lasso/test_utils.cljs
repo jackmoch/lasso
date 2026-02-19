@@ -76,6 +76,10 @@
 
 (defn with-fresh-db [f]
   "Fixture to reset db before each test."
+  ;; Re-register stubs after all event namespaces have loaded — their top-level
+  ;; reg-fx calls (which reference browser globals like js/window) would
+  ;; otherwise overwrite the no-ops registered at namespace-load time.
+  (rf/reg-fx :navigate-home! (fn [_] nil))
   (reset-db!)
   (try
     (f)
