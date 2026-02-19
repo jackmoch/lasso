@@ -211,7 +211,7 @@ jobs:
 
           # Fetch historical average (last 10 successful runs)
           if command -v gh &> /dev/null; then
-            RECENT_RUNS=$(gh run list --workflow=pr.yml --limit 10 --json conclusion,createdAt,updatedAt --jq '[.[] | select(.conclusion == "success") | (((.updatedAt | fromdateiso8601) - (.createdAt | fromdateiso8601)))] | add / length | floor')
+            RECENT_RUNS=$(gh run list --workflow=pr.yml --limit 10 --json conclusion,createdAt,updatedAt --jq '[.[] | select(.conclusion == "success") | (((.updatedAt | fromdateiso8601) - (.createdAt | fromdateiso8601)))] | if length > 0 then (add / length | floor) else null end')
 
             if [ -n "$RECENT_RUNS" ] && [ "$RECENT_RUNS" != "null" ]; then
               AVG_MIN=$((RECENT_RUNS / 60))
