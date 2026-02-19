@@ -129,7 +129,7 @@
                       (.document username)
                       (.collection "sessions")
                       (.orderBy "started_at" Query$Direction/DESCENDING)
-                      (.limit limit-n)
+                      (.limit (int limit-n))
                       .get
                       .get
                       .getDocuments)]
