@@ -5,6 +5,7 @@
             [lasso.util.http :as http]
             [lasso.util.crypto :as crypto]
             [lasso.session.store :as store]
+            [lasso.session.manager :as session-manager]
             [lasso.user.remember :as remember]
             [lasso.user.store :as user-store]
             [lasso.config :as config]))
@@ -39,6 +40,8 @@
                        ;; Re-upsert user to keep last_seen current and create the doc
                        ;; if the initial OAuth write failed (e.g. IAM not yet propagated)
                        (user-store/upsert-user (:username user) (:encrypted_session_key user))
+                       ;; Restore active following session if one exists in Firestore
+                       (session-manager/maybe-restore-session! session-id (:username user) plain-key)
                        (-> context
                            (assoc-in [:request :session] session-data)
                            ;; Store new session-id so :leave can set the cookie

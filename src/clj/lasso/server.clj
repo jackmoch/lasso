@@ -5,6 +5,7 @@
             [io.pedestal.interceptor :refer [interceptor]]
             [clojure.java.io :as io]
             [clojure.string :as str]
+            [clojure.data.json :as json]
             [lasso.config :as config]
             [lasso.routes :as routes]
             [lasso.middleware.security :as security]
@@ -14,6 +15,22 @@
   (:gen-class))
 
 (defonce server-instance (atom nil))
+
+(defn- json-output-fn
+  "Timbre output function that emits JSON lines for Cloud Logging.
+   Cloud Logging parses jsonPayload automatically from structured JSON."
+  [{:keys [level ?ns-str msg_ timestamp_]}]
+  (let [severity (case level
+                   (:trace :debug) "DEBUG"
+                   :info           "INFO"
+                   :warn           "WARNING"
+                   :error          "ERROR"
+                   :fatal          "CRITICAL"
+                   "DEFAULT")]
+    (json/write-str {:timestamp (force timestamp_)
+                     :severity  severity
+                     :logger    (or ?ns-str "lasso")
+                     :message   (force msg_)})))
 
 (def spa-not-found-interceptor
   "Serve SPA HTML for non-API routes when no route matches.
@@ -95,5 +112,10 @@
 (defn -main
   "Application entry point."
   [& _args]
+  (when (= "production" (config/get-env "ENVIRONMENT"))
+    (log/merge-config!
+     {:output-fn    json-output-fn
+      :timestamp-opts {:pattern  "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"
+                       :timezone (java.util.TimeZone/getTimeZone "UTC")}}))
   (log/info "Starting Lasso application...")
   (start))

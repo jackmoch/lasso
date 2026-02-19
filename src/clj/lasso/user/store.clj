@@ -79,6 +79,16 @@
       (log/info "Finished Firestore session record"
                 {:username username :session-id fs-session-id :state state}))))
 
+(defn get-latest-active-session
+  "Fetch the most recent active following-session record for a user from Firestore.
+   Returns nil if Firestore is unavailable, no sessions exist, or none are active."
+  [username]
+  (when (fs/enabled?)
+    (->> (fs/query-subcollection username 10)
+         (filter #(= "active" (:state %)))
+         (sort-by :started_at >)
+         first)))
+
 (defn get-user-profile
   "Return the user document merged with up to 50 recent session records,
    sorted by started_at descending.

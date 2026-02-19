@@ -3,8 +3,10 @@
   (:require [lasso.session.store :as store]
             [lasso.lastfm.client :as lastfm]
             [lasso.polling.scheduler :as scheduler]
+            [lasso.polling.engine :as engine]
             [lasso.user.store :as user-store]
             [lasso.util.crypto :as crypto]
+            [lasso.config :as config]
             [taoensso.timbre :as log]))
 
 (defn validate-target-user
@@ -146,6 +148,41 @@
         (scheduler/handle-session-state-change session-id :stopped)
         {:success true :session updated})
       {:success false :error "Session not found"})))
+
+(defn- restore-following-session!
+  "Rebuild in-memory following session state from a Firestore session record and
+   restart the polling loop. Called by maybe-restore-session! when a valid active
+   session is found in Firestore after server restart."
+  [session-id username _session-key fs-session]
+  (let [target (:target_username fs-session)
+        cache  (engine/rebuild-scrobble-cache target (config/get-env "LASTFM_API_KEY"))]
+    (store/update-session
+     session-id
+     (fn [session]
+       (assoc session :following-session
+              {:target-username  (:target_username fs-session)
+               :state            :active
+               :started-at       (:started_at fs-session)
+               :last-poll        nil
+               :scrobble-count   (or (:scrobble_count fs-session) 0)
+               :scrobble-cache   cache
+               :recent-scrobbles []
+               :fs-session-id    (:id fs-session)})))
+    (scheduler/start-poller session-id)
+    (log/info "Restored following session" {:username username :target target})))
+
+(defn maybe-restore-session!
+  "Check Firestore for an active following session and restore it if one exists
+   that is less than 24 hours old and the in-memory session is not already active.
+   No-op when Firestore is unavailable, session is already active, or no valid
+   record exists. Safe to call on every login."
+  [session-id username session-key]
+  (let [mem-state (get-in (store/get-session session-id) [:following-session :state])]
+    (when (not= :active mem-state)
+      (when-let [fs-session (user-store/get-latest-active-session username)]
+        (let [age-ms (- (System/currentTimeMillis) (or (:started_at fs-session) 0))]
+          (when (< age-ms (* 24 60 60 1000))
+            (restore-following-session! session-id username session-key fs-session)))))))
 
 (defn get-session-status
   "Get the current status of a session.

@@ -4,6 +4,7 @@
             [lasso.auth.handlers :as handlers]
             [lasso.lastfm.oauth :as oauth]
             [lasso.auth.session :as auth-session]
+            [lasso.session.manager :as session-manager]
             [lasso.session.store :as store]
             [lasso.util.http :as http]
             [clojure.data.json :as json]))
@@ -104,6 +105,24 @@
         (is (= 500 (:status response)))
         (is (= "Authentication callback failed" (:error body)))
         (is (= "OAUTH_CALLBACK_ERROR" (:error_code body)))))))
+
+(deftest auth-callback-calls-maybe-restore-session
+  (testing "OAuth callback calls maybe-restore-session! after upsert-user"
+    (with-redefs [oauth/get-session-key (fn [_]
+                                          {:session {:name "testuser" :key "session-key-abc"}})]
+      (let [restore-called (atom false)
+            restore-session-id (atom nil)]
+        (with-redefs [session-manager/maybe-restore-session!
+                      (fn [sid _username _key]
+                        (reset! restore-called true)
+                        (reset! restore-session-id sid))]
+          (let [request {:params {:token "authorized-token"}}
+                response (handlers/auth-callback-handler request)]
+            (is (= 302 (:status response)))
+            (is (true? @restore-called)
+                "maybe-restore-session! should be called after OAuth callback")
+            (is (some? @restore-session-id)
+                "maybe-restore-session! should receive the new session-id")))))))
 
 ;; Tests for logout-handler
 (deftest logout-handler-test
