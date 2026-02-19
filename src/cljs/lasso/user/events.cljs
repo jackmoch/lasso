@@ -25,20 +25,18 @@
        (assoc-in [:user :profile] (dissoc response :sessions))
        (assoc-in [:user :sessions] (or (:sessions response) [])))))
 
-(rf/reg-event-db
+(rf/reg-event-fx
  :user/fetch-profile-failure
- (fn [db [_ response]]
+ (fn [{:keys [db]} [_ response]]
    (let [status (:status response)
          error-code (get-in response [:response :error_code])]
-     (-> db
-         (assoc-in [:user :loading?] false)
-         (assoc-in [:user :error]
-                   (cond
-                     (= error-code "PERSISTENCE_UNAVAILABLE")
-                     "Profile history is not available yet."
-
-                     (= 401 status)
-                     "Please log in to view your profile."
-
-                     :else
-                     "Failed to load profile. Please try again."))))))
+     (if (= 401 status)
+       ;; Not authenticated — navigate home rather than showing an error on /profile
+       {:db (assoc-in db [:user :loading?] false)
+        :navigate-home! true}
+       {:db (-> db
+                (assoc-in [:user :loading?] false)
+                (assoc-in [:user :error]
+                          (if (= error-code "PERSISTENCE_UNAVAILABLE")
+                            "Profile history is not available yet."
+                            "Failed to load profile. Please try again.")))}))))
