@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-02-19
+
+### Added - Persistent User Profiles + Remember Me (Sprint 11)
+- **Cloud Firestore persistence layer** (`src/clj/lasso/firestore/client.clj`) with graceful fallback — all operations no-op if Firestore is unavailable
+- **User store** (`src/clj/lasso/user/store.clj`): `upsert-user`, `add-session-record`, `finish-session-record`, `get-user-profile`
+- **Remember-me tokens** (`src/clj/lasso/user/remember.clj`): 90-day `lasso-remember` cookie — users stay logged in across browser restarts without re-authenticating via Last.fm
+- **`GET /api/user/profile`** endpoint returning username, member-since, total scrobbles, distinct-targets count, and last 50 sessions
+- **Profile page** at `/profile` (Re-frame): member-since date, scrobble/session/people stats, full session history table with duration and state
+- **Profile link** in authenticated header; route guard redirects unauthenticated users to home
+- **Session logging**: every following session writes a Firestore record on start and updates it (scrobble count, ended_at, state) on stop/complete
+- **Firestore data isolation** by environment: `dev-` prefix in development, `staging-` in staging, no prefix in production
+- **`/health`** endpoint now reports Firestore status (`"ok"` or `"unavailable"`)
+- 22 new backend tests (Firestore client, user store, remember-me, profile handler)
+
+### Added - CI/CD Improvements
+- **Split CI workflow**: `pr.yml` validates PRs only (lint + tests + docker-validate); `deploy.yml` deploys on push/merge — eliminates redundant post-merge validate run (~2.5 min saved per deploy)
+
+### Fixed
+- Sign Out button on `/profile` now correctly redirects to landing page
+- Navigating to `/profile` while logged out redirects to home (route guard via 401)
+- Active following session is properly finalised in Firestore when user logs out
+- `firestore/init!` moved into `server/start` so dev REPL environment initialises Firestore correctly
+- Firestore client now uses explicit `setProjectId` (ADC project detection was unreliable when `GOOGLE_CLOUD_PROJECT` not in JVM env)
+- `.limit()` call now passes `(int n)` — Clojure `long` caused a silent reflection error returning `nil` instead of results
+- Profile data now fetched on navigation via `:navigated` event handler (route controllers were non-functional without `rfc/apply-controllers`)
+
 ## [0.6.0] - 2026-02-18
 
 ### Added - Admin Dashboard (Sprint 10)
