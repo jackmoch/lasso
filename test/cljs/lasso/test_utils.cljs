@@ -6,6 +6,7 @@
 
 ;; Register no-op effect handlers for testing
 (rf/reg-fx :http-xhrio (fn [_] nil))
+(rf/reg-fx :navigate-home! (fn [_] nil))
 
 ;; ============================================================================
 ;; Basic DB Utilities
