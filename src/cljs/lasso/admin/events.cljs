@@ -28,7 +28,9 @@
    (let [route-name (get-in match [:data :name])]
      (cond-> {:db (assoc db :route match)}
        ;; Auto-fetch status when navigating to the admin dashboard
-       (= :admin route-name) (assoc :dispatch [:admin/fetch-status])))))
+       (= :admin route-name) (assoc :dispatch [:admin/fetch-status])
+       ;; Fetch profile data when navigating to /profile
+       (= :profile route-name) (assoc :dispatch [:user/fetch-profile])))))
 
 ;; =============================================================================
 ;; Admin Login

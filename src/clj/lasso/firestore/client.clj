@@ -17,15 +17,21 @@
 
 (defn init!
   "Initialise the Firestore client using Application Default Credentials.
+   Explicitly sets the project ID from config so the correct GCP project is
+   used regardless of GOOGLE_CLOUD_PROJECT environment variable presence.
    Logs a warning and disables persistence if credentials are unavailable."
   []
-  (try
-    (reset! db-atom (-> (FirestoreOptions/getDefaultInstance) .getService))
-    (log/info "Firestore client initialised"
-              {:prefix (get-in config/config [:firestore :collection-prefix])
-               :project (get-in config/config [:firestore :project-id])})
-    (catch Exception e
-      (log/warn "Firestore unavailable — persistence disabled:" (.getMessage e)))))
+  (let [project-id (get-in config/config [:firestore :project-id])]
+    (try
+      (reset! db-atom (-> (FirestoreOptions/newBuilder)
+                          (.setProjectId project-id)
+                          .build
+                          .getService))
+      (log/info "Firestore client initialised"
+                {:prefix (get-in config/config [:firestore :collection-prefix])
+                 :project project-id})
+      (catch Exception e
+        (log/warn "Firestore unavailable — persistence disabled:" (.getMessage e))))))
 
 (defn enabled?
   "Returns true if the Firestore client is initialised."
@@ -129,11 +135,13 @@
                       (.document username)
                       (.collection "sessions")
                       (.orderBy "started_at" Query$Direction/DESCENDING)
-                      (.limit limit-n)
+                      (.limit (int limit-n))
                       .get
                       .get
-                      .getDocuments)]
-        (mapv snap->map snaps))
+                      .getDocuments)
+            results (mapv snap->map snaps)]
+        (log/debug "query-subcollection" {:username username :count (count results)})
+        results)
       (catch Exception e
         (log/error e "Firestore query-subcollection error" {:username username})
         nil))))

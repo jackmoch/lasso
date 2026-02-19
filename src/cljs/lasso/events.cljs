@@ -96,6 +96,10 @@
                  [:auth/logout-success]
                  [:auth/logout-failure])}))
 
+(rf/reg-fx :navigate-home!
+  (fn [_]
+    (set! (.-href (.-location js/window)) "/")))
+
 (rf/reg-event-fx
  :auth/logout-success
  (fn [{:keys [db]} _]
@@ -105,7 +109,8 @@
             (assoc-in [:auth :username] nil)
             (assoc-in [:session] (:session db/default-db))
             (assoc-in [:ui :polling?] false))
-    :dispatch [:session/stop-polling]}))
+    :dispatch [:session/stop-polling]
+    :navigate-home! true}))
 
 (rf/reg-event-fx
  :auth/logout-failure

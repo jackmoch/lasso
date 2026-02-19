@@ -2,6 +2,8 @@
   "HTTP handlers for OAuth authentication flow."
   (:require [lasso.lastfm.oauth :as oauth]
             [lasso.auth.session :as auth-session]
+            [lasso.session.manager :as session-manager]
+            [lasso.session.store :as session-store]
             [lasso.util.http :as http]
             [lasso.config :as config]
             [lasso.user.store :as user-store]
@@ -86,6 +88,9 @@
   (try
     (let [session-id     (get-in request [:session :session-id])
           remember-token (http/parse-cookie request "lasso-remember")]
+      ;; Finalise any active following session before destroying the auth session
+      (when (-> (session-store/get-session session-id) :following-session some?)
+        (session-manager/stop-session session-id))
       (auth-session/destroy-session session-id)
       (remember/delete-token! remember-token)
       (log/info "User logged out" {:session-id session-id})

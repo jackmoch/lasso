@@ -68,6 +68,7 @@
   "Start the Pedestal server."
   []
   (when-not @server-instance
+    (firestore/init!)
     (let [server (-> (create-server)
                      http/create-server
                      http/start)]
@@ -95,5 +96,4 @@
   "Application entry point."
   [& _args]
   (log/info "Starting Lasso application...")
-  (firestore/init!)
   (start))
