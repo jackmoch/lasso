@@ -56,6 +56,23 @@
        :album album
        :timestamp timestamp})))
 
+(defn rebuild-scrobble-cache
+  "Pre-populate the scrobble cache from the target user's last 50 tracks.
+   Called when restoring a session after server restart to prevent duplicate scrobbles.
+   Returns #{} on error — safe, worst case is 1-2 duplicates on the first poll."
+  [target-username _api-key]
+  (try
+    (let [result (fetch-recent-tracks target-username 50)]
+      (if (:error result)
+        #{}
+        (->> (:tracks result)
+             (keep parse-lastfm-track)
+             (map track->cache-key)
+             (into #{}))))
+    (catch Exception e
+      (log/warn "Could not rebuild scrobble cache:" (.getMessage e))
+      #{})))
+
 (defn identify-new-tracks
   "Identify tracks that haven't been scrobbled yet.
    Compares against scrobble-cache to find new tracks.

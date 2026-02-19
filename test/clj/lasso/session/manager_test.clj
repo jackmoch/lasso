@@ -4,7 +4,10 @@
             [lasso.session.manager :as manager]
             [lasso.session.store :as store]
             [lasso.auth.session :as auth-session]
-            [lasso.lastfm.client :as lastfm]))
+            [lasso.lastfm.client :as lastfm]
+            [lasso.user.store :as user-store]
+            [lasso.polling.engine :as engine]
+            [lasso.polling.scheduler :as scheduler]))
 
 ;; Test fixtures
 (defn reset-sessions-fixture [f]
@@ -178,6 +181,61 @@
       (is (not (:authenticated status)))
       (is (nil? (:username status)))
       (is (nil? (:session status))))))
+
+;; Tests for maybe-restore-session!
+(deftest maybe-restore-session-test
+  (testing "no-op when following session is already active in memory"
+    (with-redefs [lastfm/api-request (fn [_] {:user {:name "targetuser"}})]
+      (let [{:keys [session-id]} (auth-session/create-session "testuser" "session-key")
+            ;; Start a session so in-memory state is already :active
+            _ (manager/start-session session-id "targetuser")
+            fs-lookup-called (atom false)]
+        (with-redefs [user-store/get-latest-active-session (fn [_] (reset! fs-lookup-called true) nil)]
+          (manager/maybe-restore-session! session-id "testuser" "session-key")
+          ;; Firestore should NOT be consulted when session is already active
+          (is (false? @fs-lookup-called))))))
+
+  (testing "no-op when Firestore returns no active session"
+    (let [{:keys [session-id]} (auth-session/create-session "testuser" "session-key")
+          start-poller-called (atom false)]
+      (with-redefs [user-store/get-latest-active-session (fn [_] nil)
+                    scheduler/start-poller (fn [_] (reset! start-poller-called true))]
+        (manager/maybe-restore-session! session-id "testuser" "session-key")
+        (is (false? @start-poller-called))
+        (is (nil? (get-in (store/get-session session-id) [:following-session]))))))
+
+  (testing "no-op when Firestore session is more than 24 hours old"
+    (let [{:keys [session-id]} (auth-session/create-session "testuser" "session-key")
+          stale-started-at    (- (System/currentTimeMillis) (* 25 60 60 1000))
+          stale-session        {:id "fs-sess-1" :target_username "radiohead"
+                                :state "active" :started_at stale-started-at
+                                :scrobble_count 5}
+          start-poller-called (atom false)]
+      (with-redefs [user-store/get-latest-active-session (fn [_] stale-session)
+                    scheduler/start-poller (fn [_] (reset! start-poller-called true))]
+        (manager/maybe-restore-session! session-id "testuser" "session-key")
+        (is (false? @start-poller-called))
+        (is (nil? (get-in (store/get-session session-id) [:following-session]))))))
+
+  (testing "restores session when active record exists and is less than 24h old"
+    (let [{:keys [session-id]} (auth-session/create-session "testuser" "session-key")
+          recent-started-at   (- (System/currentTimeMillis) (* 2 60 60 1000))
+          fs-session           {:id "fs-sess-2" :target_username "bjork"
+                                :state "active" :started_at recent-started-at
+                                :scrobble_count 10}
+          start-poller-called (atom false)]
+      (with-redefs [user-store/get-latest-active-session (fn [_] fs-session)
+                    engine/rebuild-scrobble-cache        (fn [_ _] #{"bjork|track|100"})
+                    scheduler/start-poller               (fn [_] (reset! start-poller-called true))]
+        (manager/maybe-restore-session! session-id "testuser" "session-key")
+        (is (true? @start-poller-called))
+        (let [following (get-in (store/get-session session-id) [:following-session])]
+          (is (some? following))
+          (is (= :active (:state following)))
+          (is (= "bjork" (:target-username following)))
+          (is (= 10 (:scrobble-count following)))
+          (is (= #{"bjork|track|100"} (:scrobble-cache following)))
+          (is (= "fs-sess-2" (:fs-session-id following))))))))
 
 ;; Tests for can-start-session?
 (deftest can-start-session-test

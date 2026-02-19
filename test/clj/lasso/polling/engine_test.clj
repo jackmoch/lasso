@@ -115,6 +115,36 @@
       (is (= 2 (count new-tracks)))
       (is (<= (:timestamp (first new-tracks)) (:timestamp (second new-tracks)))))))
 
+;; Test for rebuild-scrobble-cache
+(deftest rebuild-scrobble-cache-test
+  (testing "returns a set of cache keys from recent tracks"
+    (with-redefs [client/api-request
+                  (fn [_]
+                    {:recenttracks
+                     {:track [{:artist {:#text "The Beatles"}
+                               :name "Hey Jude"
+                               :date {:uts "1234567890"}}
+                              {:artist {:#text "Radiohead"}
+                               :name "Karma Police"
+                               :date {:uts "1234567900"}}]}})]
+      (let [cache (engine/rebuild-scrobble-cache "target-user" "api-key")]
+        (is (set? cache))
+        (is (= 2 (count cache)))
+        (is (contains? cache "The Beatles|Hey Jude|1234567890"))
+        (is (contains? cache "Radiohead|Karma Police|1234567900")))))
+
+  (testing "returns empty set on Last.fm error"
+    (with-redefs [client/api-request (fn [_] {:error 6 :message "User not found"})]
+      (let [cache (engine/rebuild-scrobble-cache "target-user" "api-key")]
+        (is (set? cache))
+        (is (empty? cache)))))
+
+  (testing "returns empty set on exception"
+    (with-redefs [client/api-request (fn [_] (throw (Exception. "Network error")))]
+      (let [cache (engine/rebuild-scrobble-cache "target-user" "api-key")]
+        (is (set? cache))
+        (is (empty? cache))))))
+
 ;; Test for update-session-after-poll
 (deftest update-session-after-poll-test
   (testing "updates session with scrobble count and cache"

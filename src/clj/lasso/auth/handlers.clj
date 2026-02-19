@@ -47,10 +47,12 @@
                   is-production? (= :production (:environment config/config))
                   ;; Persist user to Firestore (no-op if unavailable)
                   _ (user-store/upsert-user username encrypted-key)
+                  ;; Restore active following session if one exists in Firestore
+                  _ (session-manager/maybe-restore-session! session-id username session-key)
                   ;; Generate remember-me token (no-op if Firestore unavailable)
                   remember-token (remember/generate-token)
                   _ (remember/save-token! remember-token username)]
-              (log/info "User authenticated successfully" {:username username})
+              (log/info "OAuth callback completed" {:username username})
               {:status 302
                :headers {"Location"   "/"
                          "Set-Cookie" [(http/cookie-string "session-id" session-id

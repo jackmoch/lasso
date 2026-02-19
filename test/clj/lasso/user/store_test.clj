@@ -171,3 +171,42 @@
         (is (nil? (:first_seen profile)))
         (is (= 0 (:total_scrobbles profile)))
         (is (= [] (:sessions profile)))))))
+
+;; =============================================================================
+;; get-latest-active-session tests
+;; =============================================================================
+
+(deftest get-latest-active-session-returns-nil-when-no-sessions
+  (let [mocks (make-fs-mocks)]
+    (with-redefs [fs/enabled?            (:enabled? mocks)
+                  fs/query-subcollection (:query-subcollection mocks)]
+      (is (nil? (user-store/get-latest-active-session "alice"))))))
+
+(deftest get-latest-active-session-skips-non-active-sessions
+  (let [mocks (make-fs-mocks)]
+    (with-redefs [fs/enabled?            (:enabled? mocks)
+                  fs/query-subcollection (:query-subcollection mocks)]
+      ;; Populate with completed and stopped sessions only
+      (swap! test-subdocs assoc-in ["alice" "s1"]
+             {:id "s1" :target_username "radiohead" :state "completed" :started_at 1000})
+      (swap! test-subdocs assoc-in ["alice" "s2"]
+             {:id "s2" :target_username "radiohead" :state "stopped" :started_at 2000})
+      (is (nil? (user-store/get-latest-active-session "alice"))))))
+
+(deftest get-latest-active-session-returns-newest-active-session
+  (let [mocks (make-fs-mocks)]
+    (with-redefs [fs/enabled?            (:enabled? mocks)
+                  fs/query-subcollection (:query-subcollection mocks)]
+      ;; Populate with two active sessions — should return the newer one
+      (swap! test-subdocs assoc-in ["alice" "s-old"]
+             {:id "s-old" :target_username "radiohead" :state "active" :started_at 1000})
+      (swap! test-subdocs assoc-in ["alice" "s-new"]
+             {:id "s-new" :target_username "bjork" :state "active" :started_at 5000})
+      (let [result (user-store/get-latest-active-session "alice")]
+        (is (some? result))
+        (is (= "s-new" (:id result)))
+        (is (= "bjork" (:target_username result)))))))
+
+(deftest get-latest-active-session-returns-nil-when-firestore-disabled
+  (with-redefs [fs/enabled? (fn [] false)]
+    (is (nil? (user-store/get-latest-active-session "alice")))))
