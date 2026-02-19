@@ -102,7 +102,7 @@
           [:a.text-sm.text-gray-600.hover:text-gray-900
            {:href "/"} "Home"]
           [:button.text-sm.text-gray-600.hover:text-gray-900
-           {:on-click #(rf/dispatch [:logout])}
+           {:on-click #(rf/dispatch [:auth/logout])}
            "Sign Out"]]]]
 
        [:div.max-w-4xl.mx-auto.px-4.pb-8

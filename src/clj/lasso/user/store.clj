@@ -81,10 +81,16 @@
 
 (defn get-user-profile
   "Return the user document merged with up to 50 recent session records,
-   sorted by started_at descending. Returns nil if Firestore unavailable."
+   sorted by started_at descending.
+   Returns nil if Firestore unavailable. Returns a profile map with empty
+   fields if the user doc doesn't exist yet (sessions are still fetched)."
   [username]
   (when (fs/enabled?)
-    (let [user (fs/get-doc users-collection username)]
-      (when user
-        (let [sessions (or (fs/query-subcollection username 50) [])]
-          (assoc user :sessions sessions))))))
+    (let [user     (fs/get-doc users-collection username)
+          sessions (or (fs/query-subcollection username 50) [])]
+      {:username        username
+       :first_seen      (:first_seen user)
+       :last_seen       (:last_seen user)
+       :total_scrobbles (or (:total_scrobbles user) 0)
+       :last_target     (:last_target user)
+       :sessions        sessions})))
